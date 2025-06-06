@@ -11,9 +11,6 @@ const registerValidation = [
     .trim()
     .isLength({ min: 3 })
     .withMessage('Le nom d\'utilisateur doit contenir au moins 3 caractères'),
-  body('email')
-    .isEmail()
-    .withMessage('Email invalide'),
   body('password')
     .isLength({ min: 6 })
     .withMessage('Le mot de passe doit contenir au moins 6 caractères'),
@@ -22,9 +19,10 @@ const registerValidation = [
 
 // Validation pour la connexion
 const loginValidation = [
-  body('email')
-    .isEmail()
-    .withMessage('Email invalide'),
+  body('username')
+    .trim()
+    .notEmpty()
+    .withMessage('Nom d\'utilisateur requis'),
   body('password')
     .exists()
     .withMessage('Mot de passe requis'),

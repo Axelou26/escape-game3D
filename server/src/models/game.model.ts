@@ -1,5 +1,6 @@
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from './sequelize';
+import User from './user.model';
 
 interface InventoryItem {
   id: string;
@@ -23,16 +24,17 @@ class Game extends Model {
   public currentElapsedTime!: number;
   public isCompleted!: boolean;
   public gameState!: GameState;
+  public User?: User;
 }
 
 Game.init({
   id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.INTEGER.UNSIGNED,
     autoIncrement: true,
     primaryKey: true
   },
   userId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.INTEGER.UNSIGNED,
     allowNull: false
   },
   startTime: {
@@ -98,6 +100,12 @@ Game.init({
 }, {
   sequelize,
   modelName: 'Game'
+});
+
+// Définir la relation avec User
+Game.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'User'
 });
 
 export default Game; 

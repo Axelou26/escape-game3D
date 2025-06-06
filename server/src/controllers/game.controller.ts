@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import Game from '../models/game.model';
+import User from '../models/user.model';
 import { AppError } from '../utils/error';
-import { User } from '../models/user.model';
 import { ValidationError } from 'sequelize';
 
 interface SequelizeError extends Error {

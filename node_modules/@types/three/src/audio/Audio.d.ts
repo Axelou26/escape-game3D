@@ -1,6 +1,6 @@
-import { Object3D } from './../core/Object3D';
-import { AudioListener } from './AudioListener';
-import { AudioContext } from './AudioContext';
+import { Object3D } from "../core/Object3D.js";
+import { AudioContext } from "./AudioContext.js";
+import { AudioListener } from "./AudioListener.js";
 
 // Extras / Audio /////////////////////////////////////////////////////////////////////
 
@@ -40,7 +40,7 @@ export class Audio<NodeType extends AudioNode = GainNode> extends Object3D {
      * @remarks Sub-classes will update this value.
      * @defaultValue `Audio`
      */
-    readonly type: string | 'Audio';
+    readonly type: string | "Audio";
 
     /**
      * A reference to the listener object of this audio.
@@ -129,7 +129,7 @@ export class Audio<NodeType extends AudioNode = GainNode> extends Object3D {
      * An {@link https://developer.mozilla.org/en-US/docs/Web/API/AudioBufferSourceNode | AudioBufferSourceNode} created using
      * {@link https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createBufferSource | AudioContext.createBufferSource()}.
      */
-    source: AudioBufferSourceNode | null;
+    source: AudioScheduledSourceNode | null;
 
     /**
      * Represents an array of {@link https://developer.mozilla.org/en-US/docs/Web/API/AudioNode | AudioNodes}.
@@ -149,7 +149,7 @@ export class Audio<NodeType extends AudioNode = GainNode> extends Object3D {
      * Setup the {@link Audio.source | source} to the audioBuffer, and sets {@link Audio.sourceType | sourceType} to 'audioNode'.
      * @remarks Also sets {@link Audio.hasPlaybackControl | hasPlaybackControl} to false.
      */
-    setNodeSource(audioNode: AudioBufferSourceNode): this;
+    setNodeSource(audioNode: AudioScheduledSourceNode): this;
 
     /**
      * Applies the given object of type {@link https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement | HTMLMediaElement} as the source of this audio.
@@ -173,14 +173,17 @@ export class Audio<NodeType extends AudioNode = GainNode> extends Object3D {
      * If {@link Audio.hasPlaybackControl | hasPlaybackControl} is true, starts playback.
      */
     play(delay?: number): this;
+
     /**
      * If {@link Audio.hasPlaybackControl | hasPlaybackControl} is true, pauses playback.
      */
     pause(): this;
+
     /**
      * If {@link Audio.hasPlaybackControl | hasPlaybackControl} is enabled, stops playback.
+     * @param delay (optional) - The delay, in seconds, at which the audio should start playing.
      */
-    stop(): this;
+    stop(delay?: number): this;
 
     /**
      * Called automatically when playback finished.

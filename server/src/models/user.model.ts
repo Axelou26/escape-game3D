@@ -1,12 +1,10 @@
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from './sequelize';
-import Game from './game.model';
 import bcrypt from 'bcrypt';
 
-export class User extends Model {
+class User extends Model {
   public id!: number;
   public username!: string;
-  public email!: string;
   public password!: string;
   public isAdmin!: boolean;
 
@@ -25,7 +23,7 @@ export class User extends Model {
 
 User.init({
   id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.INTEGER.UNSIGNED,
     autoIncrement: true,
     primaryKey: true
   },
@@ -33,14 +31,6 @@ User.init({
     type: DataTypes.STRING,
     allowNull: false,
     unique: true
-  },
-  email: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,
-    validate: {
-      isEmail: true
-    }
   },
   password: {
     type: DataTypes.STRING,
@@ -70,6 +60,4 @@ User.init({
   }
 });
 
-// Association avec Game
-Game.belongsTo(User, { foreignKey: 'userId' });
-User.hasMany(Game, { foreignKey: 'userId' }); 
+export default User; 

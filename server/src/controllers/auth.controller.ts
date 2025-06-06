@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { User } from '../models/user.model';
+import User from '../models/user.model';
+import bcrypt from 'bcrypt';
 import { AppError } from '../middleware/errorHandler';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'votre-secret-jwt';
@@ -11,20 +12,24 @@ export const register = async (
   next: NextFunction
 ) => {
   try {
-    const { username, email, password } = req.body;
+    console.log('Données reçues dans register:', req.body);
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      throw new AppError(400, 'Le nom d\'utilisateur et le mot de passe sont requis');
+    }
 
     // Vérifier si l'utilisateur existe déjà
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser = await User.findOne({ where: { username } });
     if (existingUser) {
-      throw new AppError(400, 'Un utilisateur avec cet email existe déjà');
+      throw new AppError(400, 'Un utilisateur avec ce nom d\'utilisateur existe déjà');
     }
 
     // Créer le nouvel utilisateur
     const user = await User.create({
       username,
-      email,
       password,
-      isAdmin: false // Ajout de la propriété isAdmin avec une valeur par défaut
+      isAdmin: false
     });
 
     // Générer le token JWT
@@ -52,18 +57,23 @@ export const login = async (
   next: NextFunction
 ) => {
   try {
-    const { email, password } = req.body;
+    console.log('Données reçues dans login:', req.body);
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      throw new AppError(400, 'Le nom d\'utilisateur et le mot de passe sont requis');
+    }
 
     // Trouver l'utilisateur
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ where: { username } });
     if (!user) {
-      throw new AppError(401, 'Email ou mot de passe incorrect');
+      throw new AppError(401, 'Nom d\'utilisateur ou mot de passe incorrect');
     }
 
     // Vérifier le mot de passe
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
-      throw new AppError(401, 'Email ou mot de passe incorrect');
+      throw new AppError(401, 'Nom d\'utilisateur ou mot de passe incorrect');
     }
 
     // Générer le token JWT

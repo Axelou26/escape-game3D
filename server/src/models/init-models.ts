@@ -1,24 +1,38 @@
-import { User } from './user.model';
+import User from './user.model';
 import Game from './game.model';
+import { Room, Puzzle } from './room.model';
 import { sequelize } from './sequelize';
 
-export const initModels = async () => {
+export async function initModels() {
   // Définir les associations
+  Game.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'creator'
+  });
+
   User.hasMany(Game, {
     foreignKey: 'userId',
     as: 'games'
   });
 
-  Game.belongsTo(User, {
-    foreignKey: 'userId',
-    as: 'user'
+  Room.hasMany(Puzzle, {
+    foreignKey: 'roomId',
+    as: 'puzzles'
+  });
+
+  Puzzle.belongsTo(Room, {
+    foreignKey: 'roomId',
+    as: 'room'
   });
 
   // Synchroniser les modèles avec la base de données
-  await sequelize.sync();
+  // Alter: true mettra à jour les tables existantes au lieu de les recréer
+  await sequelize.sync({ alter: true });
 
   return {
     User,
-    Game
+    Game,
+    Room,
+    Puzzle
   };
-}; 
+} 
