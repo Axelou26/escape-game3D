@@ -230,5 +230,61 @@ export const gameController = {
         message: 'Erreur lors de la récupération du classement'
       });
     }
+  },
+
+  // Réinitialiser la partie
+  async resetGame(req: Request, res: Response) {
+    try {
+      if (!req.user?.id) {
+        throw new AppError(401, 'Non authentifié');
+      }
+
+      // Terminer la partie en cours si elle existe
+      await Game.update(
+        { isCompleted: true },
+        {
+          where: {
+            userId: req.user.id,
+            isCompleted: false
+          }
+        }
+      );
+
+      // Créer une nouvelle partie
+      const newGame = await Game.create({
+        userId: req.user.id,
+        startTime: new Date(),
+        score: 1000,
+        currentElapsedTime: 0,
+        isCompleted: false,
+        gameState: {
+          currentRoom: 'library',
+          inventory: [],
+          score: 1000,
+          elapsedTime: 0,
+          microscopeEnigmeResolved: false,
+          periodicTableUnlocked: false,
+          unlockedRooms: ['library'],
+          computerUnlocked: false,
+          gameCompleted: false,
+          artifactUnlocked: false
+        }
+      });
+
+      res.json({
+        status: 'success',
+        data: {
+          gameId: newGame.id,
+          gameState: newGame.gameState
+        }
+      });
+    } catch (error) {
+      console.error('Erreur resetGame:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Erreur lors de la réinitialisation de la partie',
+        details: error instanceof Error ? error.message : 'Erreur inconnue'
+      });
+    }
   }
 }; 

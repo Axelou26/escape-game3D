@@ -24,6 +24,16 @@ setupRoutes(app);
 // Middleware de gestion des erreurs global
 app.use(errorHandler);
 
+// Middleware de gestion d'erreur global
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error('Erreur globale:', err);
+  res.setHeader('Content-Type', 'application/json');
+  res.status(500).json({
+    status: 'error',
+    message: err.message || 'Une erreur est survenue'
+  });
+});
+
 // Servir les fichiers statiques du frontend
 app.use(express.static(path.join(__dirname, '../../client/build')));
 

@@ -14,6 +14,8 @@ interface AuthenticatedRequest extends Request {
 export class LeaderboardController {
   public async getLeaderboard(req: Request, res: Response) {
     try {
+      console.log('Récupération du classement...');
+      
       // Récupérer les parties terminées avec les informations des joueurs
       const completedGames = await Game.findAll({
         where: {
@@ -31,6 +33,8 @@ export class LeaderboardController {
         limit: 10
       });
 
+      console.log('Parties trouvées:', completedGames.length);
+
       // Formater les données pour le classement
       const leaderboard = completedGames.map(game => ({
         username: (game as any).User?.username || 'Joueur Anonyme',
@@ -38,12 +42,18 @@ export class LeaderboardController {
         completionTime: game.currentElapsedTime
       }));
 
+      console.log('Leaderboard formaté:', leaderboard);
+
+      // S'assurer que la réponse est bien en JSON
+      res.setHeader('Content-Type', 'application/json');
       res.json({
         status: 'success',
         leaderboard
       });
     } catch (error) {
       console.error('Erreur lors de la récupération du classement:', error);
+      // S'assurer que l'erreur est aussi en JSON
+      res.setHeader('Content-Type', 'application/json');
       res.status(500).json({
         status: 'error',
         message: 'Erreur lors de la récupération du classement'
