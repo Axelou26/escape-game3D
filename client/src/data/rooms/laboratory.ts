@@ -1,0 +1,70 @@
+import { Room } from '../../types/gameTypes';
+
+export const laboratoryRoom: Room = {
+  id: 'laboratory',
+  type: 'laboratory',
+  name: 'Laboratoire',
+  description: 'Un laboratoire ancien rempli d\'équipements scientifiques mystérieux et d\'expériences inachevées.',
+  objects: [
+    {
+      id: 'microscope',
+      name: 'Microscope',
+      type: 'equipment',
+      position: { x: -2, y: 1.2, z: -3 },
+      isActive: true,
+      isHighlighted: false,
+      blocksMovement: false,
+      description: 'Un microscope ancien avec une lame de verre particulière.',
+      providesItems: ['strange-formula'],
+    },
+    {
+      id: 'strange-formula',
+      name: 'Formule Étrange',
+      type: 'inventory',
+      position: { x: 0, y: 0, z: 0 },
+      isActive: false,
+      isHighlighted: false,
+      blocksMovement: false,
+      description: 'Une formule chimique complexe visible uniquement au microscope.',
+    },
+    {
+      id: 'chemical-cabinet',
+      name: 'Armoire à Produits Chimiques',
+      type: 'cabinet',
+      position: { x: 2, y: 1.8, z: -2 },
+      isActive: true,
+      isHighlighted: false,
+      blocksMovement: true,
+      description: 'Une armoire contenant divers produits chimiques.',
+      puzzle: {
+        type: 'sequence',
+        solution: 'rouge-bleu-vert',
+        hints: ['L\'ordre des couleurs est important...']
+      },
+      providesItems: ['crystal-key'],
+    },
+    {
+      id: 'crystal-key',
+      name: 'Clé en Cristal',
+      type: 'key',
+      position: { x: 0, y: 0, z: 0 },
+      isActive: false,
+      isHighlighted: false,
+      blocksMovement: false,
+      description: 'Une clé taillée dans un cristal qui brille d\'une lueur étrange.',
+    },
+    {
+      id: 'secret-door',
+      name: 'Porte Secrète',
+      type: 'door',
+      position: { x: 0, y: 2, z: -5 },
+      isActive: true,
+      isHighlighted: false,
+      blocksMovement: true,
+      description: 'Une porte dissimulée derrière un panneau coulissant.',
+      requiredItems: ['crystal-key'],
+      unlockedRooms: ['secret-chamber'],
+    }
+  ],
+  isCompleted: false,
+}; 

@@ -1,0 +1,335 @@
+.inventory {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid #ffd700;
+  border-radius: 12px;
+  padding: 15px;
+  color: white;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+  transition: all 0.3s ease;
+  max-width: 300px;
+  z-index: 1000;
+}
+
+.inventory:hover {
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+}
+
+.inventory h2 {
+  margin: 0 0 15px 0;
+  font-size: 1.2em;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #ffd700;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  gap: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  min-height: 80px;
+}
+
+.inventory-item {
+  position: relative;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  animation: itemAppear 0.3s ease-out;
+}
+
+.inventory-item:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 215, 0, 0.1);
+  border-color: #ffd700;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+
+.inventory-item:active {
+  transform: translateY(0);
+}
+
+.item-icon {
+  font-size: 1.5em;
+  filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.5));
+}
+
+.item-name {
+  font-size: 0.8em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  color: #e0e0e0;
+}
+
+.inventory-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+}
+
+/* Animation pour l'apparition des objets */
+@keyframes itemAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Animation pour l'utilisation d'un objet */
+.inventory-item.using {
+  animation: useItem 0.5s ease-in-out;
+}
+
+@keyframes useItem {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.1);
+    filter: brightness(1.5);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+/* Effet de brillance au survol */
+.inventory-item::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 9px;
+  background: linear-gradient(45deg, transparent, rgba(255, 215, 0, 0.1), transparent);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.inventory-item:hover::after {
+  opacity: 1;
+}
+
+/* Style pour les différents types d'objets */
+.inventory-item[data-type="key"] {
+  border-color: rgba(255, 215, 0, 0.5);
+}
+
+.inventory-item[data-type="note"] {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.inventory-item[data-type="tool"] {
+  border-color: rgba(0, 191, 255, 0.5);
+}
+
+.inventory-item[data-type="clue"] {
+  border-color: rgba(147, 112, 219, 0.5);
+}
+
+/* État étendu de l'inventaire */
+.inventory.expanded {
+  width: 300px;
+  transition: width 0.3s ease;
+}
+
+.inventory h2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.inventory h2::after {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-left: 10px;
+  transition: transform 0.3s ease;
+}
+
+.inventory.expanded h2::after {
+  transform: rotate(180deg);
+}
+
+/* Détails des objets */
+.item-details {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.95);
+  border: 1px solid #ffd700;
+  border-radius: 8px;
+  padding: 10px;
+  width: 200px;
+  color: white;
+  font-size: 0.9em;
+  z-index: 1000;
+  pointer-events: none;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.item-details::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 10px;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.95);
+  border-right: 1px solid #ffd700;
+  border-bottom: 1px solid #ffd700;
+}
+
+.item-details p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Animation de sélection */
+.inventory-item.selected {
+  transform: scale(1.1);
+  z-index: 1;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+/* Animation de fade in */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Effet de pulsation pour les nouveaux objets */
+.inventory-item.new {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 215, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
+  }
+}
+
+/* Style pour les objets désactivés */
+.inventory-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Effet de surbrillance pour les objets utilisables */
+.inventory-item.usable {
+  animation: highlight 1s infinite alternate;
+}
+
+@keyframes highlight {
+  from {
+    box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+  }
+  to {
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+  }
+}
+
+/* Responsive design amélioré */
+@media (max-width: 768px) {
+  .inventory {
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: none;
+  }
+
+  .inventory.expanded {
+    width: auto;
+  }
+
+  .inventory-grid {
+    grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  }
+
+  .item-details {
+    width: 150px;
+    font-size: 0.8em;
+  }
+}
+
+/* Animation de déplacement pour le drag and drop */
+.inventory-item.dragging {
+  opacity: 0.5;
+  transform: scale(1.1);
+  z-index: 1000;
+}
+
+@media (max-width: 768px) {
+  .inventory {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform: none;
+    width: 100%;
+    max-height: 30vh;
+    border: none;
+    border-top: 2px solid #4a3423;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.3);
+  }
+
+  .inventory-grid {
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .item-icon {
+    font-size: 1.5rem;
+  }
+
+  .item-name {
+    font-size: 0.7rem;
+  }
+} 

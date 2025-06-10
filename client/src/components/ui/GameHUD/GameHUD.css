@@ -1,0 +1,166 @@
+.game-hud {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 15px;
+  border-radius: 10px;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  z-index: 2000;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+  min-width: 200px;
+}
+
+.hud-section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hud-label {
+  font-size: 14px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.hud-value {
+  font-size: 24px;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.score .hud-value {
+  color: #4CAF50;
+}
+
+.time .hud-value {
+  color: #2196F3;
+}
+
+.stats {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 10px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #888;
+}
+
+.stat-value {
+  font-size: 16px;
+  color: #FFC107;
+  font-weight: bold;
+}
+
+/* Animation pour les changements de valeurs */
+.hud-value, .stat-value {
+  transition: all 0.3s ease;
+}
+
+/* Effet de brillance lors des changements de score */
+@keyframes score-change {
+  0% { text-shadow: 0 0 10px rgba(255, 255, 255, 0.3); }
+  50% { text-shadow: 0 0 20px rgba(255, 255, 255, 0.8); }
+  100% { text-shadow: 0 0 10px rgba(255, 255, 255, 0.3); }
+}
+
+.score .hud-value.changed {
+  animation: score-change 0.5s ease;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .game-hud {
+    top: 10px;
+    right: 10px;
+    min-width: 150px;
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .hud-label {
+    font-size: 12px;
+  }
+
+  .hud-value {
+    font-size: 20px;
+  }
+
+  .stat-item {
+    margin-bottom: 3px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+  }
+
+  .stat-value {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-hud {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    border-radius: 0;
+    flex-direction: row;
+    justify-content: space-around;
+    min-width: unset;
+    padding: 5px;
+  }
+
+  .hud-section {
+    flex: 1;
+    align-items: center;
+  }
+
+  .stats {
+    display: none;
+  }
+
+  .hud-label {
+    font-size: 10px;
+  }
+
+  .hud-value {
+    font-size: 16px;
+  }
+}
+
+/* Orientation Landscape */
+@media (max-height: 500px) and (orientation: landscape) {
+  .game-hud {
+    top: 5px;
+    right: 5px;
+    padding: 8px;
+    gap: 8px;
+    max-width: 120px;
+  }
+
+  .hud-value {
+    font-size: 18px;
+  }
+
+  .stats {
+    max-height: 100px;
+    overflow-y: auto;
+  }
+} 
