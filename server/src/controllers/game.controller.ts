@@ -167,6 +167,8 @@ export const gameController = {
         throw new AppError(401, 'Non authentifié');
       }
 
+      const { finalScore, finalTime, gameState } = req.body;
+
       const game = await Game.findOne({
         where: {
           userId: req.user.id,
@@ -178,9 +180,15 @@ export const gameController = {
         throw new AppError(404, 'Partie non trouvée');
       }
 
+      // Mettre à jour avec le score final, le temps final et marquer comme terminé
       await game.update({
+        score: finalScore || game.score,
+        currentElapsedTime: finalTime || game.currentElapsedTime,
+        gameState: gameState || game.gameState,
         isCompleted: true
       });
+
+      console.log(`Partie terminée - Score final: ${finalScore || game.score}, Temps: ${finalTime || game.currentElapsedTime}`);
 
       res.json({
         status: 'success',

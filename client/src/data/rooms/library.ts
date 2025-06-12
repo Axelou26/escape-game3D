@@ -25,7 +25,7 @@ export const libraryRoom: Room = {
       isActive: false,
       isHighlighted: false,
       blocksMovement: false,
-      description: 'Un vieux marque-page avec le nombre 1963 inscrit dessus.',
+      description: 'Un vieux marque-page avec une egnime dessus.',
     },
     {
       id: 'locked-drawer',
@@ -43,16 +43,7 @@ export const libraryRoom: Room = {
       },
       providesItems: ['riddle-paper'],
     },
-    {
-      id: 'riddle-paper',
-      name: 'Papier avec Énigme',
-      type: 'inventory',
-      position: { x: 0, y: 0, z: 0 },
-      isActive: false,
-      isHighlighted: false,
-      blocksMovement: false,
-      description: 'Une feuille avec une énigme : "Je suis le nombre d\'étoiles dans la constellation du Capricorne multiplié par l\'année de publication du Petit Prince. Quel suis-je ?" (Réponse: 8646)',
-    },
+    
     {
       id: 'painting',
       name: 'Tableau Mystérieux',

@@ -26,21 +26,7 @@ export const BibliothequeScene: React.FC<BibliothequeSceneProps> = ({
 
   // Gestionnaire d'interactions local
   const handleInteraction = (objectId: string, objectType: string, action?: string) => {
-    if (objectId === 'mysterious-book' && action === 'add_to_inventory') {
-      const bookItem: InventoryItem = {
-        id: 'professors-journal',
-        name: 'Journal du Professeur',
-        description: 'Un vieux journal contenant des notes énigmatiques',
-        type: 'note'
-      };
-      
-      if (!inventory.some(item => item.id === bookItem.id)) {
-        onUpdateGameState?.({
-          inventory: [...inventory, bookItem]
-        });
-        showMessage?.('Journal du Professeur ajouté à l\'inventaire');
-      }
-    }
+    // Déléguer toute la logique d'ajout d'objets à EscapeGame
     if (onInteract) {
       onInteract(objectId, objectType, action);
     }

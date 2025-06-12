@@ -66,20 +66,39 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     artifactUnlocked: false
   });
 
-  // Mettre à jour la ref quand les props changent
+  // Initialiser l'état du tableau périodique
   useEffect(() => {
     periodicTableStateRef.current = {
-      ...periodicTableStateRef.current,
       isLocked: !periodicTableUnlocked,
-      globalUnlocked: periodicTableUnlocked
+      globalUnlocked: periodicTableUnlocked,
+      riddleCollected: false
     };
+    
+    setIsPeriodicTableLocked(!periodicTableUnlocked);
+    
+    if (!periodicTableUnlocked) {
+      onUpdateGameState({ 
+        periodicTableUnlocked: false,
+        microscopeEnigmeResolved: false 
+      });
+    }
+  }, [periodicTableUnlocked, onUpdateGameState]);
+
+  // Synchroniser l'état local avec l'état global
+  useEffect(() => {
+    if (periodicTableUnlocked && !periodicTableStateRef.current.globalUnlocked) {
+      periodicTableStateRef.current = {
+        ...periodicTableStateRef.current,
+        isLocked: false,
+        globalUnlocked: true
+      };
+      setIsPeriodicTableLocked(false);
+    }
   }, [periodicTableUnlocked]);
 
   // Vérification de la séquence de couleurs
   const checkColorSequence = useCallback((beakerId: string) => {
-    console.log('Vérification de la séquence avec le bécher:', beakerId);
-    console.log('Séquence actuelle:', selectedBeakersRef.current);
-    console.log('État du tableau périodique:', { isLocked: isPeriodicTableLocked, globalUnlocked: periodicTableUnlocked });
+    
 
     // Séquence correcte : rouge, orange, jaune, vert, bleu, violet
     const correctSequence = [
@@ -107,10 +126,9 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         const newSequence = [beakerId];
         setSelectedBeakers(newSequence);
         selectedBeakersRef.current = newSequence;
-        onInteract('sequence', 'message', 'examine', `Bien ! Maintenant, cliquez sur le bécher ${colorNames[correctSequence[1]]}.`);
       } else {
         onInteract('sequence', 'feedback', 'feedback', 'incorrect');
-        onInteract('sequence', 'message', 'examine', `Il faut commencer par le bécher ${colorNames[correctSequence[0]]} !`);
+        onInteract('beaker-sequence', 'laboratory', 'checkBeakerSequence', { isCorrect: false });
       }
       return;
     }
@@ -124,7 +142,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       setSelectedBeakers([]);
       selectedBeakersRef.current = [];
       onInteract('sequence', 'feedback', 'feedback', 'incorrect');
-      onInteract('sequence', 'message', 'examine', `Séquence incorrecte. Recommencez par le bécher ${colorNames[correctSequence[0]]}.`);
+      onInteract('beaker-sequence', 'laboratory', 'checkBeakerSequence', { isCorrect: false });
       return;
     }
 
@@ -135,9 +153,11 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
 
     // Si la séquence est complète
     if (newSequence.length === correctSequence.length) {
-      console.log('Séquence complète et correcte !');
       setSelectedBeakers([]);
       selectedBeakersRef.current = [];
+      
+      // Donner les points pour la séquence réussie
+      onInteract('beaker-sequence', 'laboratory', 'checkBeakerSequence', { isCorrect: true });
       
       // Mettre à jour l'état global et la ref
       onUpdateGameState({ 
@@ -153,23 +173,13 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       
       setIsPeriodicTableLocked(false);
       
-      console.log('États mis à jour - Local:', false, 'Global:', true);
+
       
-      onInteract('sequence', 'feedback', 'feedback', 'correct');
       onInteract('sequence', 'message', 'examine', `Le mécanisme du tableau périodique s'active ! Allez examiner le tableau pour découvrir ce qui a changé...`);
       
       onInteract('periodic-table', 'state', 'unlock', { isLocked: false, globalUnlocked: true });
-    } else {
-      // Indiquer le prochain bécher à sélectionner
-      const nextColorName = colorNames[correctSequence[newSequence.length]];
-      onInteract('sequence', 'message', 'examine', `Bien ! Maintenant, cliquez sur le bécher ${nextColorName}.`);
     }
   }, [onInteract, onUpdateGameState]);
-
-  // Synchroniser l'état local avec l'état global
-  useEffect(() => {
-    setIsPeriodicTableLocked(!periodicTableUnlocked);
-  }, [periodicTableUnlocked]);
 
   // Mettre à jour gameStateRef quand l'état change
   useEffect(() => {
@@ -187,13 +197,6 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     };
     gameStateRef.current = currentGameState;
   }, [periodicTableUnlocked]);
-
-  // Initialiser l'état du tableau périodique
-  useEffect(() => {
-    if (!periodicTableUnlocked) {
-      onUpdateGameState({ periodicTableUnlocked: false });
-    }
-  }, [onUpdateGameState, periodicTableUnlocked]);
 
   // Vérification des collisions
   const checkCollision = useCallback((position: THREE.Vector3): boolean => {
@@ -282,10 +285,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         object = object.parent;
       }
       if (object?.userData.interactive) {
-        console.log('Interaction avec:', object.userData.id, 'État du tableau:', { 
-          isLocked: object.userData.id === 'periodic-table' ? periodicTableStateRef.current.isLocked : isPeriodicTableLocked, 
-          globalUnlocked: periodicTableStateRef.current.globalUnlocked 
-        });
+
         
         switch (object.userData.id) {
           case 'microscope':
@@ -305,7 +305,6 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
             break;
           case 'periodic-table':
             if (object.userData.type === 'state' && object.userData.action === 'unlock') {
-              console.log('Mise à jour forcée des états du tableau:', object.userData.data);
               periodicTableStateRef.current = {
                 ...periodicTableStateRef.current,
                 isLocked: false,
@@ -318,7 +317,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
               break;
             }
             
-            if (periodicTableStateRef.current.isLocked || !periodicTableStateRef.current.globalUnlocked) {
+            if (!periodicTableStateRef.current.globalUnlocked) {
               onInteract(object.userData.id, 'message', 'examine', 'Le tableau périodique semble verrouillé. Peut-être que la séquence des béchers pourrait le déverrouiller...');
             } else if (!periodicTableStateRef.current.riddleCollected) {
               const periodicTableRiddle = {
@@ -333,11 +332,18 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
                   answer: 'OHN'
                 }
               };
+              
+              // Ajouter l'énigme à l'inventaire avec la bonne action
               onInteract(object.userData.id, 'riddle', 'add_to_inventory', periodicTableRiddle);
+              
+              // Message de confirmation
               onInteract('periodic-table-message', 'message', 'examine', 'Une énigme mystérieuse est apparue sur le tableau périodique ! Elle a été ajoutée à votre inventaire.');
               
               // Marquer l'énigme comme récupérée
-              periodicTableStateRef.current.riddleCollected = true;
+              periodicTableStateRef.current = {
+                ...periodicTableStateRef.current,
+                riddleCollected: true
+              };
             } else {
               onInteract(object.userData.id, 'message', 'examine', 'Vous avez déjà récupéré l\'énigme du tableau périodique.');
             }
@@ -429,10 +435,9 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     }
 
     try {
-      if (rendererRef.current) {
-        console.log("Le renderer existe déjà, réutilisation...");
-        return rendererRef.current;
-      }
+          if (rendererRef.current) {
+      return rendererRef.current;
+    }
 
       const renderer = new THREE.WebGLRenderer({
         antialias: true,
@@ -1609,9 +1614,15 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
   // Gérer la soumission du code
   const handleCodeSubmit = useCallback((code: string) => {
     if (code === 'OHN') {
+      // Donner les points pour le code correct
+      onInteract('computer-code', 'security', 'enterCode', { isCorrect: true });
+      
       labStateRef.current.isComputerUnlocked = true;
       labStateRef.current.isLockerUnlocked = true;
       onUpdateGameState({ computerUnlocked: true });
+      
+      // Donner la clé en cristal
+      onInteract('crystal-key', 'key', 'add_key_to_inventory');
       
       // Messages dans le jeu avec un type spécifique
       onInteract('computer-message', 'notification', 'display', 'Code correct ! Accès système autorisé.');
@@ -1620,6 +1631,9 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         onInteract('computer-message', 'notification', 'display', 'Le casier sécurisé est maintenant déverrouillé ! Vous pouvez maintenant l\'examiner pour découvrir ce qu\'il cache.');
       }, 2000);
     } else {
+      // Donner les points pour le code incorrect
+      onInteract('computer-code', 'security', 'enterCode', { isCorrect: false });
+      
       labStateRef.current.computerAttempts++;
       if (labStateRef.current.computerAttempts >= 3) {
         onInteract('computer-message', 'notification', 'display', 'ATTENTION: Trop de tentatives incorrectes. Indice: Regardez l\'énigme du tableau périodique.');

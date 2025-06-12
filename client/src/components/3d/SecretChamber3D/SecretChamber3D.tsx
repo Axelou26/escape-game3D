@@ -21,9 +21,10 @@ declare module 'three/examples/jsm/controls/PointerLockControls' {
 interface SecretChamber3DProps {
   onInteract?: (objectId: string, objectType: string, action?: string, data?: any) => void;
   onUpdateGameState?: (updates: Partial<GameState>) => void;
+  onEndGame?: () => Promise<void>;
 }
 
-export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, onUpdateGameState }) => {
+export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, onUpdateGameState, onEndGame }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<PointerLockControls | null>(null);
   const moveStateRef = useRef({
@@ -238,18 +239,22 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
 
   const handleCodeSubmit = useCallback((code: string) => {
     if (code === '6353') {
+      // Code correct : +200 points et arrêt du jeu
+      onInteract?.('final-code', 'security', 'enterCode', { isCorrect: true, isGameComplete: true });
+      
       setArtifactUnlocked(true);
       setShowCodeInput(false);
       setShowSuccessMessage(true);
       if (onUpdateGameState) {
         const updates: Partial<GameState> = {
-          score: gameStateRef.current.score + 100,
           artifactUnlocked: true,
           gameCompleted: true
         };
         onUpdateGameState(updates);
       }
     } else {
+      // Code incorrect : -10 points
+      onInteract?.('final-code', 'security', 'enterCode', { isCorrect: false });
       onInteract?.('artifact-wrong-code', 'message', 'examine', 'Code incorrect. Essayez encore.');
     }
     if (controlsRef.current) {
@@ -257,10 +262,21 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     }
   }, [onInteract, onUpdateGameState]);
 
-  const handleSuccessClose = useCallback(() => {
+  const handleSuccessClose = useCallback(async () => {
     setShowSuccessMessage(false);
-    navigate('/leaderboard');
-  }, [navigate]);
+    
+    // Sauvegarder le score final avant de naviguer
+    try {
+      if (onEndGame) {
+        await onEndGame();
+      }
+      navigate('/leaderboard');
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde du score final:', error);
+      // Naviguer quand même vers le leaderboard
+      navigate('/leaderboard');
+    }
+  }, [navigate, onEndGame]);
 
   const handleInteraction = useCallback(() => {
     if (!cameraRef.current || !sceneRef.current) return;
@@ -283,10 +299,9 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
   }, [handleObjectInteraction]);
 
   const movePlayer = useCallback((x: number, z: number) => {
-    if (!cameraRef.current || !sceneRef.current) return;
+    if (!cameraRef.current) return;
 
     const camera = cameraRef.current;
-    const scene = sceneRef.current;
     const direction = new THREE.Vector3();
     camera.getWorldDirection(direction);
     direction.y = 0;
@@ -294,10 +309,8 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
 
     const sideways = new THREE.Vector3(-direction.z, 0, direction.x);
     const currentPosition = camera.position.clone();
-    let newPosition = currentPosition.clone();
+    const newPosition = currentPosition.clone();
 
-    const playerRadius = 0.5;
-    
     if (x !== 0) {
       newPosition.add(sideways.multiplyScalar(x));
     }
@@ -305,47 +318,17 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       newPosition.add(direction.multiplyScalar(z));
     }
 
-    // Optimisation : Réduire le nombre de directions de vérification des collisions
-    const raycaster = new THREE.Raycaster();
-    const collisionDistance = playerRadius + 0.2;
-
-    // Réduire le nombre de directions de vérification à 4 au lieu de 8
-    const collisionDirections = [
-      new THREE.Vector3(1, 0, 0),   // droite
-      new THREE.Vector3(-1, 0, 0),  // gauche
-      new THREE.Vector3(0, 0, 1),   // avant
-      new THREE.Vector3(0, 0, -1)   // arrière
-    ];
-
-    const excludeTypes = ['SpotLight', 'PointLight', 'AmbientLight', 'HemisphereLight'];
-    
-    // Optimisation : Utiliser une seule traversée de la scène pour les objets à exclure
-    const collidableObjects = scene.children.filter(obj => !excludeTypes.includes(obj.type));
-
-    let canMove = true;
-    for (const dir of collisionDirections) {
-      raycaster.set(newPosition, dir);
-      const intersects = raycaster.intersectObjects(collidableObjects, true);
-      
-      if (intersects.some(intersect => intersect.distance < collisionDistance)) {
-        canMove = false;
-        break;
-      }
-    }
-
-    // Limiter la position du joueur aux murs de la salle
+    // Limiter la position du joueur aux murs de la salle (forme circulaire)
     const radius = 9.5;
     const positionCheck = newPosition.clone();
     positionCheck.y = 0;
     if (positionCheck.length() > radius) {
-      canMove = false;
+      return;
     }
 
-    if (canMove) {
-      camera.position.copy(newPosition);
-    }
-    
-    camera.position.y = 2.5;
+    // Appliquer la nouvelle position
+    camera.position.copy(newPosition);
+    camera.position.y = 2.5; // Hauteur fixe du joueur
   }, []);
 
   const updateInteractiveHighlight = useCallback(() => {
@@ -397,10 +380,9 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     }
 
     try {
-      if (rendererRef.current) {
-        console.log("Le renderer existe déjà, réutilisation...");
-        return rendererRef.current;
-      }
+          if (rendererRef.current) {
+      return rendererRef.current;
+    }
 
       const renderer = new THREE.WebGLRenderer({
         antialias: true,
@@ -424,13 +406,13 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     }
 
     if (isInitializedRef.current) {
-      console.log("La scène est déjà initialisée, ignoré.");
+      
       return;
     }
 
     isInitializedRef.current = true;
     isDisposedRef.current = false;
-    console.log("Première initialisation de la scène...");
+    
 
     const scene = new THREE.Scene();
     sceneRef.current = scene;
@@ -1150,7 +1132,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
   useEffect(() => {
     isMountedRef.current = true;
     isDisposedRef.current = false;
-    console.log("Composant monté");
+    
 
     return () => {
       console.log("Début du démontage du composant");

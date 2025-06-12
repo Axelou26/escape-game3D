@@ -11,6 +11,8 @@ interface GameHUDProps {
 export const GameHUD: React.FC<GameHUDProps> = ({ score, elapsedTime, hintsUsed, attemptsCount }) => {
   const [timeDisplay, setTimeDisplay] = useState('00:00');
 
+
+
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -18,7 +20,8 @@ export const GameHUD: React.FC<GameHUDProps> = ({ score, elapsedTime, hintsUsed,
   };
 
   useEffect(() => {
-    setTimeDisplay(formatTime(elapsedTime));
+    const newTimeDisplay = formatTime(elapsedTime);
+    setTimeDisplay(newTimeDisplay);
   }, [elapsedTime]);
 
   return (

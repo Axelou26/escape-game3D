@@ -19,12 +19,17 @@ export class LeaderboardController {
       // Récupérer les parties terminées avec les informations des joueurs
       const completedGames = await Game.findAll({
         where: {
-          isCompleted: true
+          isCompleted: true,
+          // Vérifier que le gameState indique bien que le joueur est dans la dernière salle
+          gameState: {
+            currentRoom: 'secret-chamber' // La salle finale du jeu
+          }
         },
         include: [{
           model: User,
           attributes: ['username'],
-          as: 'User'
+          as: 'User',
+          required: true // S'assurer que l'utilisateur existe toujours
         }],
         order: [
           ['score', 'DESC'],
@@ -33,11 +38,11 @@ export class LeaderboardController {
         limit: 10
       });
 
-      console.log('Parties trouvées:', completedGames.length);
+      console.log('Parties terminées trouvées:', completedGames.length);
 
       // Formater les données pour le classement
       const leaderboard = completedGames.map(game => ({
-        username: (game as any).User?.username || 'Joueur Anonyme',
+        username: game.User?.username || 'Joueur Anonyme',
         score: game.score,
         completionTime: game.currentElapsedTime
       }));
@@ -73,11 +78,22 @@ export class LeaderboardController {
 
       const { score, completionTime } = req.body;
 
+      // Vérifier si le joueur a vraiment terminé le jeu
+      if (!req.body.gameState || req.body.gameState.currentRoom !== 'secret-chamber') {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Le jeu n\'est pas terminé'
+        });
+      }
+
       // Vérifier si une partie terminée existe déjà pour cet utilisateur
       const existingGame = await Game.findOne({
         where: {
           userId,
-          isCompleted: true
+          isCompleted: true,
+          gameState: {
+            currentRoom: 'secret-chamber'
+          }
         }
       });
 
@@ -87,7 +103,12 @@ export class LeaderboardController {
            (score === existingGame.score && completionTime < existingGame.currentElapsedTime)) {
           await existingGame.update({
             score,
-            currentElapsedTime: completionTime
+            currentElapsedTime: completionTime,
+            gameState: {
+              ...existingGame.gameState,
+              score,
+              elapsedTime: completionTime
+            }
           });
         }
       } else {

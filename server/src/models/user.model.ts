@@ -28,9 +28,12 @@ User.init({
     primaryKey: true
   },
   username: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(50),
     allowNull: false,
-    unique: true
+    unique: {
+      name: "username_unique",
+      msg: "Ce nom d'utilisateur est déjà pris"
+    }
   },
   password: {
     type: DataTypes.STRING,

@@ -12,9 +12,13 @@ export const Inventory: React.FC<InventoryProps> = ({ items, onUseItem, onItemCl
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const getItemIcon = (type: string): string => {
+  const getItemIcon = (type: string, id?: string): string => {
     switch (type) {
       case 'key':
+        // Emoji spécial pour la clé en cristal
+        if (id === 'crystal-key') {
+          return '💎';
+        }
         return '🔑';
       case 'note':
         return '📜';
@@ -55,7 +59,7 @@ export const Inventory: React.FC<InventoryProps> = ({ items, onUseItem, onItemCl
             onClick={() => handleItemClick(item)}
             title={item.description}
           >
-            <span className="item-icon">{getItemIcon(item.type)}</span>
+            <span className="item-icon">{getItemIcon(item.type, item.id)}</span>
             <span className="item-name">{item.name}</span>
             {selectedItem === item.id && (
               <div className="item-details">

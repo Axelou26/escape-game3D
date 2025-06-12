@@ -1,6 +1,7 @@
 import { Express } from 'express';
 import authRoutes from './auth.routes';
 import gameRoutes from './game.routes';
+import leaderboardRoutes from './leaderboard.routes';
 
 export const setupRoutes = (app: Express) => {
   // Route racine
@@ -10,6 +11,7 @@ export const setupRoutes = (app: Express) => {
       endpoints: {
         auth: '/api/auth',
         game: '/api/game',
+        leaderboard: '/api/leaderboard',
         health: '/api/health'
       }
     });
@@ -20,6 +22,9 @@ export const setupRoutes = (app: Express) => {
 
   // Routes du jeu
   app.use('/api/game', gameRoutes);
+
+  // Routes du leaderboard
+  app.use('/api/leaderboard', leaderboardRoutes);
 
   // Route de test pour vérifier que l'API fonctionne
   app.get('/api/health', (req, res) => {

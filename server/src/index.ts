@@ -18,28 +18,41 @@ const server = createServer(app);
 app.use(cors());
 app.use(express.json());
 
-// Configuration des routes API
+// Configuration des routes API - doit être AVANT les fichiers statiques
 setupRoutes(app);
 
-// Middleware de gestion des erreurs global
+// Middleware de gestion des erreurs pour les routes API
 app.use(errorHandler);
 
-// Middleware de gestion d'erreur global
+// Middleware de gestion d'erreur global pour les routes API
 app.use((err: any, req: any, res: any, next: any) => {
-  console.error('Erreur globale:', err);
-  res.setHeader('Content-Type', 'application/json');
-  res.status(500).json({
-    status: 'error',
-    message: err.message || 'Une erreur est survenue'
-  });
+  // Ne traiter que les routes API
+  if (req.path.startsWith('/api/')) {
+    console.error('Erreur API:', err);
+    res.setHeader('Content-Type', 'application/json');
+    res.status(500).json({
+      status: 'error',
+      message: err.message || 'Une erreur est survenue'
+    });
+  } else {
+    next(err);
+  }
 });
 
-// Servir les fichiers statiques du frontend
+// Servir les fichiers statiques du frontend APRÈS les routes API
 app.use(express.static(path.join(__dirname, '../../client/build')));
 
-// Route pour gérer toutes les autres requêtes vers le frontend
+// Route catch-all pour le frontend - doit être en DERNIER
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../client/build/index.html'));
+  // Ne pas traiter les routes API non trouvées
+  if (req.path.startsWith('/api/')) {
+    res.status(404).json({
+      status: 'error',
+      message: 'Route API non trouvée'
+    });
+  } else {
+    res.sendFile(path.join(__dirname, '../../client/build/index.html'));
+  }
 });
 
 const PORT = process.env.PORT || 3001;

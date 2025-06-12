@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Leaderboard.css';
 
 interface LeaderboardEntry {
@@ -8,6 +9,7 @@ interface LeaderboardEntry {
 }
 
 export const Leaderboard: React.FC = () => {
+  const navigate = useNavigate();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -15,7 +17,7 @@ export const Leaderboard: React.FC = () => {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        console.log('Tentative de récupération du classement...');
+
         const response = await fetch('/api/leaderboard', {
           method: 'GET',
           headers: {
@@ -24,20 +26,26 @@ export const Leaderboard: React.FC = () => {
           }
         });
         
-        console.log('Statut de la réponse:', response.status);
         const contentType = response.headers.get('content-type');
-        console.log('Type de contenu:', contentType);
 
         if (!response.ok) {
-          throw new Error(`Erreur HTTP: ${response.status}`);
+          const errorText = await response.text();
+          console.error('Réponse erreur:', errorText);
+          throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
         }
 
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error(`Type de contenu invalide: ${contentType}`);
+        // Essayer de lire le corps de la réponse comme texte d'abord
+        const responseText = await response.text();
+
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Erreur de parsing JSON:', parseError);
+          throw new Error(`Impossible de parser la réponse JSON: ${responseText.substring(0, 100)}...`);
         }
 
-        const data = await response.json();
-        console.log('Données reçues:', data);
+
 
         if (!data.leaderboard && !data.data) {
           throw new Error('Format de données invalide');
@@ -99,7 +107,15 @@ export const Leaderboard: React.FC = () => {
 
   return (
     <div className="leaderboard-container">
-      <h1>🏆 Classement des Joueurs</h1>
+      <div className="leaderboard-header-section">
+        <h1>🏆 Classement des Joueurs</h1>
+        <button 
+          className="back-to-intro-btn"
+          onClick={() => navigate('/')}
+        >
+          ← Retour à l'Accueil
+        </button>
+      </div>
       <div className="leaderboard-table">
         <div className="leaderboard-header">
           <div className="rank">Rang</div>

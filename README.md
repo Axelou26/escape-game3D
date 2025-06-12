@@ -1,131 +1,99 @@
-# Escape Game - Jeu d'évasion en ligne
+# Escape Game
 
-Un jeu d'évasion immersif où les joueurs doivent résoudre des énigmes dans un environnement mystérieux.
+Application de jeu d'évasion interactive.
 
-## 🎮 Fonctionnalités
-
-- **Authentification** : Système de connexion/inscription sécurisé
-- **Progression** : Sauvegarde automatique de la progression
-- **Score** : Système de points basé sur le temps et les actions
-- **Classement** : Tableau des meilleurs scores
-- **Interface 3D** : Navigation immersive dans l'environnement de jeu
-- **Inventaire** : Gestion des objets collectés
-- **Énigmes** : Puzzles variés à résoudre
-
-## 🛠️ Technologies
-
-### Frontend
-- React
-- Three.js pour la 3D
-- TypeScript
-- Styled-components
-
-### Backend
-- Node.js
-- Express
-- TypeScript
-- Sequelize (MySQL)
-- JWT pour l'authentification
-
-## 📋 Prérequis
-
-- Node.js (v14 ou supérieur)
-- MySQL (v8 ou supérieur)
-- npm ou yarn
-
-## 🚀 Installation
-
-1. **Cloner le projet**
-   ```bash
-   git clone https://github.com/axelou26/escape-game.git
-   cd escape-game
-   ```
-
-2. **Configuration de la base de données**
-   - Créer une base de données MySQL nommée 'escape_game'
-   - Copier `.env.example` vers `.env` dans le dossier `server`
-   - Modifier les variables d'environnement dans `.env`
-
-3. **Installation des dépendances**
-   ```bash
-   # Installation des dépendances du serveur
-   cd server
-   npm install
-
-   # Installation des dépendances du client
-   cd ../client
-   npm install
-   ```
-
-4. **Démarrage en développement**
-   ```bash
-   # Dans le dossier server
-   npm run dev
-
-   # Dans le dossier client (nouvelle fenêtre de terminal)
-   npm start
-   ```
-
-## 📁 Structure du Projet
+## Structure du Projet
 
 ```
 escape-game/
-├── client/               # Application React (frontend)
-│   ├── src/
-│   │   ├── components/  # Composants React
-│   │   │   ├── 3d/     # Composants Three.js
-│   │   │   ├── ui/     # Interface utilisateur
-│   │   │   └── game/   # Logique de jeu
-│   │   ├── hooks/      # Hooks React personnalisés
-│   │   └── services/   # Services API
-│   └── public/         # Ressources statiques
+├── client/                 # Application frontend React
+│   ├── public/            # Fichiers statiques
+│   └── src/               # Code source React
+│       ├── components/    # Composants React
+│       ├── pages/         # Pages de l'application
+│       ├── assets/        # Images, styles, etc.
+│       ├── utils/         # Utilitaires et helpers
+│       └── types/         # Types TypeScript
 │
-└── server/              # Serveur Express (backend)
-    ├── src/
-    │   ├── config/     # Configuration
-    │   ├── controllers/# Contrôleurs
-    │   ├── middleware/ # Middlewares
-    │   ├── models/     # Modèles Sequelize
-    │   ├── routes/     # Routes API
-    │   └── types/      # Types TypeScript
-    └── .env            # Variables d'environnement
+├── server/                # Serveur backend Node.js
+│   └── src/              # Code source du serveur
+│       ├── controllers/  # Contrôleurs
+│       ├── models/       # Modèles de données
+│       ├── routes/       # Routes API
+│       ├── services/     # Services métier
+│       └── utils/        # Utilitaires
+│
+└── shared/               # Code partagé entre client et serveur
+    └── types/           # Types TypeScript partagés
+
 ```
 
-## 🎯 Points d'API Principaux
+## Prérequis
 
-### Authentification
-- `POST /api/auth/register` : Inscription
-- `POST /api/auth/login` : Connexion
-- `POST /api/auth/logout` : Déconnexion
+- Node.js (v14 ou supérieur)
+- npm ou yarn
+- Base de données (selon votre configuration)
 
-### Jeu
-- `POST /api/game/start` : Démarrer une partie
-- `GET /api/game/current` : Récupérer la partie en cours
-- `PUT /api/game/save` : Sauvegarder la progression
-- `PUT /api/game/end` : Terminer la partie
-- `GET /api/game/leaderboard` : Obtenir le classement
+## Installation
 
-## 🔒 Variables d'Environnement
+1. Cloner le repository :
+   ```bash
+   git clone [votre-repo]
+   cd escape-game
+   ```
 
-### Server (.env)
-```env
-PORT=3001
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=votre_mot_de_passe
-DB_NAME=escape_game
-JWT_SECRET=votre_secret_jwt
-NODE_ENV=development
-```
+2. Installer les dépendances :
+   ```bash
+   # Installation des dépendances racine
+   npm install
 
-## 👥 Contribution
+   # Installation des dépendances client
+   cd client
+   npm install
+
+   # Installation des dépendances serveur
+   cd ../server
+   npm install
+   ```
+
+3. Configuration :
+   - Copier `.env.example` vers `.env` dans le dossier serveur
+   - Ajuster les variables d'environnement selon vos besoins
+
+4. Démarrer l'application :
+   ```bash
+   # Démarrer le serveur de développement
+   npm run dev
+   ```
+
+## Scripts Disponibles
+
+- `npm run dev` : Démarre l'application en mode développement
+- `npm run build` : Compile l'application pour la production
+- `npm run test` : Lance les tests
+- `npm run lint` : Vérifie le code avec ESLint
+
+## Technologies Utilisées
+
+- Frontend :
+  - React
+  - TypeScript
+  - Material-UI
+
+- Backend :
+  - Node.js
+  - Express
+  - TypeScript
+  - Sequelize
+
+## Contribution
 
 1. Fork le projet
-2. Créer une branche (`git checkout -b feature/nouvelle-fonctionnalite`)
-3. Commit les changements (`git commit -m 'Ajout d'une nouvelle fonctionnalité'`)
-4. Push vers la branche (`git push origin feature/nouvelle-fonctionnalite`)
+2. Créer une branche (`git checkout -b feature/AmazingFeature`)
+3. Commit les changements (`git commit -m 'Add some AmazingFeature'`)
+4. Push vers la branche (`git push origin feature/AmazingFeature`)
 5. Ouvrir une Pull Request
 
-## 📝 Licence
+## Licence
 
 Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails. 

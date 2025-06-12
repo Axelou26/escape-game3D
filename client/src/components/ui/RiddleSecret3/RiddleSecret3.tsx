@@ -62,7 +62,7 @@ export const RiddleSecret3: React.FC<RiddleSecret3Props> = ({ onClose }) => {
           Je porte les pensées d'un homme à un autre,
           Je traverse le monde sans bouger.
           Observe ma dernière lettre, trouve sa position dans l'alphabet,
-          et tu auras le e chiffre du code.
+          et tu auras le chiffre du code.
           Qui suis-je ?
         </p>
       </div>

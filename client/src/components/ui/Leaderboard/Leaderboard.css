@@ -10,14 +10,53 @@
   box-shadow: 0 0 30px rgba(0, 255, 0, 0.1);
 }
 
+.leaderboard-header-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
 .leaderboard-container h1 {
   text-align: center;
   color: #00ff00;
-  margin-bottom: 2rem;
+  margin: 0;
   font-size: 2.5rem;
   text-transform: uppercase;
   text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
   letter-spacing: 2px;
+  flex: 1;
+}
+
+.back-to-intro-btn {
+  background: linear-gradient(135deg, rgba(0, 255, 0, 0.2), rgba(0, 255, 0, 0.1));
+  border: 2px solid rgba(0, 255, 0, 0.4);
+  color: #00ff00;
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+  box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+}
+
+.back-to-intro-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 255, 0, 0.3), rgba(0, 255, 0, 0.2));
+  border-color: rgba(0, 255, 0, 0.6);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 25px rgba(0, 255, 0, 0.3);
+  text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+}
+
+.back-to-intro-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 15px rgba(0, 255, 0, 0.3);
 }
 
 .leaderboard-table {
@@ -141,8 +180,18 @@
     padding: 1rem;
   }
 
+  .leaderboard-header-section {
+    flex-direction: column;
+    text-align: center;
+  }
+
   .leaderboard-container h1 {
     font-size: 1.8rem;
+  }
+
+  .back-to-intro-btn {
+    font-size: 0.9rem;
+    padding: 0.7rem 1.2rem;
   }
 
   .leaderboard-header, .leaderboard-row {

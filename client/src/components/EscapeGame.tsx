@@ -15,6 +15,7 @@ import { RiddleSecret2 } from './ui/RiddleSecret2/RiddleSecret2';
 import { RiddleSecret3 } from './ui/RiddleSecret3/RiddleSecret3';
 import { RiddleSecret4 } from './ui/RiddleSecret4/RiddleSecret4';
 import './game/EscapeGame.css';
+import { ScoreEvents, ScoreEventType, updateScore } from '../types/scoreManager';
 
 // Configuration de l'API
 const API_URL = 'http://localhost:3001/api';
@@ -28,14 +29,14 @@ export const EscapeGame: React.FC = () => {
     inventory: [],
     microscopeEnigmeResolved: false,
     periodicTableUnlocked: false,
-    unlockedRooms: ['library'], // La bibliothèque est déverrouillée par défaut
+    unlockedRooms: ['library'], 
     computerUnlocked: false,
     gameCompleted: false,
     artifactUnlocked: false
   };
 
   const [gameState, setGameState] = useState<GameState>(initialGameState);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [currentCodeType, setCurrentCodeType] = useState<'drawer' | 'painting'>('drawer');
   const [message, setMessage] = useState<string>('');
@@ -98,7 +99,6 @@ export const EscapeGame: React.FC = () => {
 
       const data = await response.json();
       if (data.status === 'success') {
-        setMessage('Progression sauvegardée');
         setTimeout(() => setMessage(''), 2000);
       }
     } catch (error) {
@@ -108,6 +108,41 @@ export const EscapeGame: React.FC = () => {
       setTimeout(() => setMessage(''), 3000);
     }
   }, [isOfflineMode]);
+
+  // Fonction pour terminer le jeu et sauvegarder le score final
+  const endGame = useCallback(async () => {
+    if (isOfflineMode) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.error('Pas de token pour terminer le jeu');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/game/end`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          finalScore: gameState.score,
+          finalTime: gameState.elapsedTime,
+          gameState: gameState
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+    } catch (error) {
+      console.error('Erreur lors de la fin du jeu:', error);
+    }
+  }, [isOfflineMode, gameState]);
 
   const updateGameState = useCallback((updates: Partial<GameState>) => {
     setGameState(prevState => {
@@ -119,47 +154,136 @@ export const EscapeGame: React.FC = () => {
     });
   }, [isOfflineMode, saveGameState]);
 
+  // Mettre à jour le score en fonction des événements
+  const handleScoreUpdate = useCallback((event: ScoreEventType) => {
+    setGameState(prevState => {
+      const newScore = updateScore(prevState.score, event);
+      return {
+        ...prevState,
+        score: newScore
+      };
+    });
+  }, []);
+
   const handleInteract = useCallback((objectId: string, objectType: string, action?: string, data?: any) => {
     if (!action) return;
     
-    console.log(`Interaction avec l'objet ${objectId} de type ${objectType}, action: ${action}, data:`, data);
-    
-    if (isTransitioning) {
-      console.log('Transition en cours, interaction ignorée');
+    if (isTransitioning && !['examine', 'feedback', 'checkBeakerSequence', 'enterCode', 'add_key_to_inventory'].includes(action)) {
       return;
     }
 
-    setGameState(prevState => ({
-      ...prevState,
-      score: prevState.score - 10
-    }));
+    // Réinitialiser l'état de transition après un délai si nécessaire
+    const resetTransition = () => {
+      setTimeout(() => {
+        setIsTransitioning(false);
+      }, 100);
+    };
 
     switch (action) {
+      case 'collect':
+        handleScoreUpdate('ITEM_COLLECTED');
+        handleInventoryUpdate(objectId, objectType, data);
+        break;
+
+      case 'enterCode':
+        if (data.isGameComplete) {
+          // Code final de la chambre secrète
+          if (data.isCorrect) {
+            handleScoreUpdate('FINAL_CODE_CORRECT');
+            setGameState(prevState => ({
+              ...prevState,
+              gameCompleted: true
+            }));
+          } else {
+            handleScoreUpdate('FINAL_CODE_INCORRECT');
+          }
+        } else {
+          // Codes normaux (tiroir, tableau, ordinateur)
+          if (data.isCorrect) {
+            handleScoreUpdate('CODE_CORRECT');
+          } else {
+            handleScoreUpdate('CODE_INCORRECT');
+          }
+        }
+        handleCodeFeedback(data.isCorrect);
+        break;
+
+      case 'checkBeakerSequence':
+        if (data.isCorrect) {
+          handleScoreUpdate('BEAKER_SEQUENCE_CORRECT');
+        } else {
+          handleScoreUpdate('BEAKER_SEQUENCE_WRONG');
+        }
+        handleBeakerFeedback(data.isCorrect);
+        break;
+
+      case 'changeRoom':
+        handleScoreUpdate('ROOM_CHANGE');
+        handleRoomChange(data.newRoom);
+        break;
+
       case 'examine':
         if (objectId === 'microscope' && data) {
-          console.log("Affichage de l'indice du microscope:", data.indice);
-          setMessage(`Microscope: ${data.indice}`);
-          setTimeout(() => setMessage(''), 5000);
+          setTimeout(() => {
+            resetTransition();
+          }, 5000);
         } else {
-          setMessage(data);
-          setTimeout(() => setMessage(''), 3000);
+          setTimeout(() => {
+            resetTransition();
+          }, 3000);
         }
         break;
       case 'feedback':
         if (objectId === 'sequence' && data === 'correct') {
-          setMessage('Bravo ! Vous avez trouvé la bonne séquence de couleurs !');
           setGameState(prevState => ({
             ...prevState,
             periodicTableUnlocked: true
           }));
           setTimeout(() => setMessage(''), 3000);
         } else if (objectId === 'sequence') {
-          setMessage('La séquence est incorrecte. Essayez encore.');
           setTimeout(() => setMessage(''), 3000);
         }
         break;
       case 'add_to_inventory':
-        if (objectId === 'shadow-riddle-symbol') {
+        handleScoreUpdate('ITEM_COLLECTED');
+        if (objectType === 'riddle' && data) {
+          const riddleItem: InventoryItem = {
+            id: data.id || `riddle-${Date.now()}`,
+            type: 'riddle',
+            name: data.name,
+            description: data.description,
+            content: data.content
+          };
+          
+          setGameState(prevState => {
+            // Vérifier si l'énigme n'est pas déjà dans l'inventaire
+            const riddleExists = prevState.inventory.some(item => item.id === riddleItem.id);
+            if (riddleExists) {
+              return prevState;
+            }
+
+            return {
+              ...prevState,
+              inventory: [...prevState.inventory, riddleItem]
+            };
+          });
+          setTimeout(() => setMessage(''), 3000);
+        } else if (objectId === 'mysterious-book') {
+          const bookItem: InventoryItem = {
+            id: 'professors-journal',
+            type: 'note',
+            name: 'Journal du Professeur',
+            description: 'Un vieux journal contenant des notes énigmatiques'
+          };
+          
+          if (!gameState.inventory.some(item => item.id === bookItem.id)) {
+            setGameState(prevState => ({
+              ...prevState,
+              inventory: [...prevState.inventory, bookItem]
+            }));
+            setTimeout(() => setMessage(''), 3000);
+          }
+        } else if (objectId === 'shadow-riddle-symbol') {
           const shadowRiddle: InventoryItem = {
             id: 'shadow-riddle',
             type: 'riddle',
@@ -170,12 +294,10 @@ export const EscapeGame: React.FC = () => {
               answer: 'OMBRE'
             }
           };
-          setInventory(prev => [...prev, shadowRiddle]);
           setGameState(prevState => ({
             ...prevState,
             inventory: [...prevState.inventory, shadowRiddle]
           }));
-          setMessage('Une énigme mystérieuse est apparue ! Elle a été ajoutée à votre inventaire.');
           setTimeout(() => setMessage(''), 3000);
         } else if (objectId === 'sun-symbol') {
           const sunRiddle: InventoryItem = {
@@ -188,12 +310,10 @@ export const EscapeGame: React.FC = () => {
               answer: "SOLEIL"
             }
           };
-          setInventory(prev => [...prev, sunRiddle]);
           setGameState(prevState => ({
             ...prevState,
             inventory: [...prevState.inventory, sunRiddle]
           }));
-          setMessage('Une nouvelle énigme a été découverte ! Elle a été ajoutée à votre inventaire.');
           setTimeout(() => setMessage(''), 3000);
         } else if (objectId === 'ancient-book') {
           const bookRiddle: InventoryItem = {
@@ -206,49 +326,49 @@ export const EscapeGame: React.FC = () => {
               answer: "LIVRE"
             }
           };
-          setInventory(prev => [...prev, bookRiddle]);
           setGameState(prevState => ({
             ...prevState,
             inventory: [...prevState.inventory, bookRiddle]
           }));
-          setMessage('Une nouvelle énigme a été découverte ! Elle a été ajoutée à votre inventaire.');
-          setTimeout(() => setMessage(''), 3000);
-        } else if (objectType === 'riddle' && data) {
-          const riddleItem: InventoryItem = {
-            id: data.id,
-            type: 'riddle',
-            name: data.name,
-            description: data.description,
-            content: data.content
-          };
-          setInventory(prev => [...prev, riddleItem]);
-          setGameState(prevState => ({
-            ...prevState,
-            inventory: [...prevState.inventory, riddleItem]
-          }));
-          setMessage('Une nouvelle énigme a été découverte ! Elle a été ajoutée à votre inventaire.');
           setTimeout(() => setMessage(''), 3000);
         }
         break;
 
       case 'add_to_inventory_riddle':
+        handleScoreUpdate('ITEM_COLLECTED');
         const riddleItem: InventoryItem = {
           id: 'drawer-riddle',
           type: 'clue',
           name: 'Énigme mystérieuse',
           description: 'Une énigme qui semble liée au tableau...'
         };
-        setInventory(prev => [...prev, riddleItem]);
+        setGameState(prevState => ({
+          ...prevState,
+          inventory: [...prevState.inventory, riddleItem]
+        }));
         break;
 
       case 'add_key_to_inventory':
-        const keyItem: InventoryItem = {
-          id: 'laboratory-key',
-          type: 'key',
-          name: 'Clé du laboratoire',
-          description: 'Une clé ancienne qui semble ouvrir la porte du laboratoire secret.'
-        };
-        setInventory(prev => [...prev, keyItem]);
+        handleScoreUpdate('ITEM_COLLECTED');
+        
+        let keyItem: InventoryItem;
+        if (objectId === 'crystal-key') {
+          keyItem = {
+            id: 'crystal-key',
+            type: 'key',
+            name: 'Clé en Cristal',
+            description: 'Une clé magnifique taillée dans un cristal translucide. Elle semble ouvrir quelque chose d\'important.'
+          };
+        } else {
+          // Clé du laboratoire par défaut
+          keyItem = {
+            id: 'laboratory-key',
+            type: 'key',
+            name: 'Clé du laboratoire',
+            description: 'Une clé ancienne qui semble ouvrir la porte du laboratoire secret.'
+          };
+        }
+        
         setGameState(prevState => ({
           ...prevState,
           inventory: [...prevState.inventory, keyItem]
@@ -294,22 +414,19 @@ export const EscapeGame: React.FC = () => {
 
       case 'artifact':
         if (objectId === 'sacred-artifact') {
-          setMessage('Un artéfact mystérieux... Il semble avoir des pouvoirs magiques.');
           setTimeout(() => setMessage(''), 3000);
         }
         break;
       case 'symbol':
-        setMessage('Un symbole mystique brille d\'une lueur étrange...');
         setTimeout(() => setMessage(''), 3000);
         break;
       case 'door':
         if (objectId === 'secret-door') {
-          setMessage('Une porte secrète ornée de symboles mystérieux...');
           setTimeout(() => setMessage(''), 3000);
         }
         break;
     }
-  }, [gameState, isTransitioning, isOfflineMode, saveGameState]);
+  }, [gameState, isTransitioning, isOfflineMode, saveGameState, handleScoreUpdate]);
 
   // Initialisation du jeu
   useEffect(() => {
@@ -379,23 +496,41 @@ export const EscapeGame: React.FC = () => {
     };
   }, []);
 
-  // Timer pour elapsedTime
+  // Gérer la pénalité de temps
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || gameState.gameCompleted) return;
 
-    const timer = setInterval(() => {
-      setGameState(prevState => ({
-        ...prevState,
-        elapsedTime: prevState.elapsedTime + 1
-      }));
+    const interval = setInterval(() => {
+      setGameState(prevState => {
+        // Arrêter le chronomètre si le jeu est terminé
+        if (prevState.gameCompleted) {
+          return prevState;
+        }
+        
+        const newElapsedTime = prevState.elapsedTime + 1;
+        
+        // Appliquer la pénalité de temps seulement toutes les 2 minutes (120 secondes)
+        let newScore = prevState.score;
+        if (newElapsedTime > 0 && newElapsedTime % 120 === 0) {
+          newScore = updateScore(prevState.score, 'TIME_PENALTY');
+        }
+        
+        return {
+          ...prevState,
+          elapsedTime: newElapsedTime,
+          score: newScore
+        };
+      });
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [isLoading]);
+    return () => clearInterval(interval);
+  }, [isLoading, gameState.gameCompleted]);
 
   const handleCodeSubmit = useCallback((code: string) => {
     if (currentCodeType === 'drawer') {
       if (code === '1963') {
+        handleScoreUpdate('CODE_CORRECT');
+        handleScoreUpdate('ITEM_COLLECTED');
         const drawerRiddle: InventoryItem = {
           id: 'drawer-riddle',
           type: 'riddle',
@@ -423,24 +558,25 @@ Et le deuxième est plus petit que le quatrième.`,
         setMessage('Code correct ! Vous avez trouvé une énigme !');
         setShowCodeInput(false);
       } else {
+        handleScoreUpdate('CODE_INCORRECT');
         setMessage('Code incorrect');
         setTimeout(() => setMessage(''), 2000);
       }
     } else if (currentCodeType === 'painting') {
       if (code === '7245') {
+        handleScoreUpdate('CODE_CORRECT');
         handleInteract('laboratory-key', 'key', 'add_key_to_inventory');
         setMessage('Le mécanisme s\'active ! Une clé apparaît !');
         setShowCodeInput(false);
       } else {
+        handleScoreUpdate('CODE_INCORRECT');
         setMessage('Rien ne se passe...');
         setTimeout(() => setMessage(''), 2000);
       }
     }
-  }, [currentCodeType, handleInteract, gameState.inventory, updateGameState]);
+  }, [currentCodeType, handleInteract, gameState.inventory, updateGameState, handleScoreUpdate]);
 
   const handleUseItem = (item: InventoryItem) => {
-    console.log(`Utilisation de l'objet ${item.name}`);
-    
     switch (item.id) {
       case 'mysterious-book':
         setShowBook(true);
@@ -460,7 +596,6 @@ Et le deuxième est plus petit que le quatrième.`,
         setTimeout(() => setMessage(''), 3000);
         break;
       default:
-        setMessage(`Vous examinez ${item.name}. ${item.description}`);
         setTimeout(() => setMessage(''), 3000);
     }
   };
@@ -484,14 +619,19 @@ Et le deuxième est plus petit que le quatrième.`,
   }, []);
 
   // Gestionnaire pour le changement de salle
-  const handleRoomChange = (room: 'library' | 'laboratory' | 'secret-chamber') => {
-    updateGameState({ currentRoom: room });
-  };
+  const handleRoomChange = useCallback((newRoom: 'library' | 'laboratory' | 'secret-chamber') => {
+    setIsTransitioning(true);
+    setGameState(prevState => ({
+      ...prevState,
+      currentRoom: newRoom,
+      unlockedRooms: Array.from(new Set([...prevState.unlockedRooms, newRoom]))
+    }));
+    setTimeout(() => setIsTransitioning(false), 1000);
+  }, []);
 
   // Gestionnaire pour le redémarrage du jeu
   const handleRestart = () => {
     setGameState(initialGameState);
-    setInventory([]);
     setShowPauseMenu(false);
   };
 
@@ -519,6 +659,53 @@ Et le deuxième est plus petit que le quatrième.`,
       setCurrentRiddle(item);
       setSelectedRiddle(item.id);
     }
+  }, []);
+
+  const handleInventoryUpdate = useCallback((objectId: string, objectType: string, data: any) => {
+    const newItem: InventoryItem = {
+      id: objectId,
+      type: objectType,
+      ...data
+    };
+    
+    setGameState(prevState => {
+      // Vérifier si l'objet existe déjà dans l'inventaire
+      const itemExists = prevState.inventory.some(item => item.id === objectId);
+      if (itemExists) {
+        return prevState;
+      }
+
+      return {
+        ...prevState,
+        inventory: [...prevState.inventory, newItem]
+      };
+    });
+    
+    setTimeout(() => setMessage(''), 2000);
+  }, []);
+
+  const handleCodeFeedback = useCallback((isCorrect: boolean) => {
+    setAttemptsCount(prev => prev + 1);
+    if (isCorrect) {
+      setMessage('Code correct !');
+      setShowCodeInput(false);
+    } else {
+      setMessage('Code incorrect. Essayez encore.');
+    }
+    setTimeout(() => setMessage(''), 3000);
+  }, []);
+
+  const handleBeakerFeedback = useCallback((isCorrect: boolean) => {
+    if (isCorrect) {
+      setMessage('Séquence correcte !');
+      setGameState(prevState => ({
+        ...prevState,
+        periodicTableUnlocked: true
+      }));
+    } else {
+      setMessage('Séquence incorrecte. Essayez encore.');
+    }
+    setTimeout(() => setMessage(''), 3000);
   }, []);
 
   return (
@@ -556,6 +743,7 @@ Et le deuxième est plus petit que le quatrième.`,
               <SecretChamber3D
                 onInteract={handleInteract}
                 onUpdateGameState={updateGameState}
+                onEndGame={endGame}
               />
             )}
           </div>
