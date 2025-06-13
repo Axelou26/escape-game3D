@@ -53,17 +53,23 @@ export const RiddleSecret4: React.FC<RiddleSecret4Props> = ({ onClose }) => {
           XXXC
         </p>
         <p style={{
-          fontSize: '18px',
+          fontSize: '16px',
           color: '#ddd',
           fontStyle: 'italic',
           whiteSpace: 'pre-line',
           marginBottom: '20px'
         }}>
-          Je commence au lever du jour,
-          Et m'efface lorsque les paupières tombent.
-          Compte le nombre de voyelles dans mon nom,
-          et tu connaîtras le chiffre du code.
-          Qui suis-je ?
+            Mon domaine n’est ni maison ni château,<br/>
+            Pourtant, chaque jour, on y entre sans fardeau.<br/>
+
+            On y cherche des clés, mais pas de métal,<br/>
+            Plutôt celles qui ouvrent un savoir vital.<br/>
+
+            Silencieux parfois, agité souvent,<br/>
+            J’abrite l’esprit des petits et des grands.<br/>
+            Qui suis je? <br/>
+
+            compte mes voyelles et tu trouve le chiffre pour le code
         </p>
       </div>
 

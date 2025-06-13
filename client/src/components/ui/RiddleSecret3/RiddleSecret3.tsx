@@ -59,11 +59,12 @@ export const RiddleSecret3: React.FC<RiddleSecret3Props> = ({ onClose }) => {
           whiteSpace: 'pre-line',
           marginBottom: '20px'
         }}>
-          Je porte les pensées d'un homme à un autre,
-          Je traverse le monde sans bouger.
+          Je transmets les pensées d'un homme à un autre,<br/>
+          Je traverse le monde et pourtant je ne bouge pas.<br/>
+            Qui suis-je ?<br/>
           Observe ma dernière lettre, trouve sa position dans l'alphabet,
           et tu auras le chiffre du code.
-          Qui suis-je ?
+
         </p>
       </div>
 

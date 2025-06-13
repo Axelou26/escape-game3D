@@ -58,9 +58,11 @@ export const RiddleSecret1: React.FC<RiddleSecret1Props> = ({ onClose }) => {
           fontStyle: 'italic',
           whiteSpace: 'pre-line'
         }}>
-          Je suis ton reflet sans lumière,
-          Je te suis sans bruit, mais disparais dans l'obscurité.
-          Compte mes lettres et tu trouveras un chiffre du code.
+            Un marchand dans un village médiéval, portant un panier de six pommes dorées cueillies à l’aube.
+            En chemin vers le marché, ton ami forgeron te demande un partage. Tu lui donnes la moitié des pommes.
+            Une herboriste t’offre ensuite quatre pommes pour une herbe rare, que tu ajoutes au panier.
+            Mais un corbeau voleur
+            dérobe une pomme avant que tu n’atteignes l’étal. <br/>Combien de pommes reste-t-il dans ton panier ?
         </p>
       </div>
 

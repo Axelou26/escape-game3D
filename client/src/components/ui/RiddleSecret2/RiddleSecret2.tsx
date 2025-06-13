@@ -54,7 +54,7 @@ export const RiddleSecret2: React.FC<RiddleSecret2Props> = ({ onClose }) => {
         }}>
           Je reflète la vérité sans jamais parler.
           Ma première lettre détient un nombre ancien.
-          Trouve sa position dans l'alphabet, et tu sauras le chiffre.
+          Trouve ma position dans l'alphabet, et tu sauras le chiffre.
         </p>
       </div>
 
