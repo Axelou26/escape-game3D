@@ -8,41 +8,87 @@ interface InventoryProps {
   onItemClick?: (item: InventoryItem) => void;
 }
 
+
+
 export const Inventory: React.FC<InventoryProps> = ({ items, onUseItem, onItemClick }) => {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const getItemIcon = (type: string, id?: string): string => {
-    switch (type) {
-      case 'key':
-        // Emoji spécial pour la clé en cristal
-        if (id === 'crystal-key') {
-          return '💎';
-        }
-        return '🔑';
-      case 'note':
-        return '📜';
-      case 'riddle':
-        // Emojis spéciaux pour chaque énigme selon leur ID
-        switch (id) {
-          case 'riddle-mathematics':
-            return '🧮';
-          case 'riddle-mirror':
-            return '🪞';
-          case 'riddle-elements':
-            return '🔥';
-          case 'riddle-wisdom':
-            return '🦉';
-          case 'riddle-shadow':
-            return '🌙';
-          case 'riddle-light':
-            return '☀️';
-          default:
-            return '📖';
-        }
+    // Emojis spécifiques par ID d'objet
+    switch (id) {
+      // === CLÉS ===
+      case 'crystal-key':
+        return '💎'; // Clé en cristal
+      case 'laboratory-key':
+        return '🗝️'; // Clé du laboratoire
+      
+      // === ÉNIGMES ===
+      case 'riddle-mathematics':
+        return '🔢'; // Énigme mathématique
+      case 'riddle-elements':
+        return '⚗️'; // Énigme des éléments (chimie)
+      case 'riddle-wisdom':
+        return '📚'; // Énigme de sagesse (livre)
+      case 'riddle-shadow':
+        return '🌑'; // Énigme des ombres
+      case 'riddle-mirror':
+        return '🪞'; // Énigme du miroir
+      case 'riddle-light':
+        return '☀️'; // Énigme de la lumière
+      case 'professors-journal':
+        return '📖'; // Journal du professeur
+      
+   
+      
+      // === OBJETS DE COLLECTION ===
+      
+      case 'ancient-key-fragment':
+        return '🗝️'; // Fragment de clé
+      case 'crystal-shard':
+        return '💎'; // Éclat de cristal
+      
+      
+      // === FALLBACK PAR TYPE ===
       default:
-        return '❓';
+        switch (type) {
+          case 'key':
+            return '🔑'; // Clé générique
+          case 'riddle':
+            return '🧩'; // Énigme générique
+          default:
+            return '❓'; // Objet inconnu
+        }
     }
+  };
+
+  // Fonction pour obtenir un emoji d'état selon le contexte
+  const getItemStatusIcon = (item: InventoryItem): string => {
+    // Ajouter des indicateurs visuels selon l'état de l'objet
+    if (item.type === 'riddle') {
+      return '✨'; // Énigmes brillent
+    }
+    if (item.type === 'key') {
+      return '🔓'; // Clés peuvent ouvrir
+    }
+    if (item.id?.includes('ancient') || item.id?.includes('mystical')) {
+      return '✨'; // Objets anciens/mystiques brillent
+    }
+    return ''; // Pas d'indicateur spécial
+  };
+
+  // Fonction pour obtenir la rareté de l'objet
+  const getItemRarity = (item: InventoryItem): string => {
+    if (item.id === 'crystal-key' || item.id === 'sacred-artifact') {
+      return 'legendary'; // Objets légendaires
+    }
+    if (item.id?.includes('ancient') || item.id?.includes('mystical')) {
+      return 'rare'; // Objets rares
+    }
+    if (item.type === 'riddle') {
+      return 'uncommon'; // Énigmes peu communes
+    }
+    return 'common'; // Objets communs
   };
 
   const handleItemClick = (item: InventoryItem) => {
@@ -59,7 +105,7 @@ export const Inventory: React.FC<InventoryProps> = ({ items, onUseItem, onItemCl
   return (
     <div className={`inventory ${isExpanded ? 'expanded' : ''}`}>
       <h2 onClick={toggleExpand} style={{ cursor: 'pointer' }}>
-        Inventaire {isExpanded ? '▼' : '▲'}
+        🎒 Inventaire ({items.length}) {isExpanded ? '▼' : '▲'}
       </h2>
       <div className="inventory-grid">
         {items.map((item) => (
@@ -67,22 +113,32 @@ export const Inventory: React.FC<InventoryProps> = ({ items, onUseItem, onItemCl
             key={item.id}
             data-item-id={item.id}
             data-type={item.type}
-            className={`inventory-item ${selectedItem === item.id ? 'selected' : ''}`}
+            data-rarity={getItemRarity(item)}
+            className={`inventory-item ${selectedItem === item.id ? 'selected' : ''} rarity-${getItemRarity(item)}`}
             onClick={() => handleItemClick(item)}
-            title={item.description}
+            title={`${item.name}\n${item.description}`}
           >
-            <span className="item-icon">{getItemIcon(item.type, item.id)}</span>
+            <div className="item-icon-container">
+              <span className="item-icon">{getItemIcon(item.type, item.id)}</span>
+              <span className="item-status">{getItemStatusIcon(item)}</span>
+            </div>
             <span className="item-name">{item.name}</span>
             {selectedItem === item.id && (
               <div className="item-details">
-                <p>{item.description}</p>
+                <p><strong>📝 Description:</strong> {item.description}</p>
+                {item.content?.riddle && (
+                  <p><strong>🧩 Type:</strong> Énigme interactive</p>
+                )}
+                {item.type === 'key' && (
+                  <p><strong>🔑 Utilisation:</strong> Peut ouvrir des portes ou mécanismes</p>
+                )}
               </div>
             )}
           </div>
         ))}
         {items.length === 0 && (
           <div className="inventory-empty">
-            Votre inventaire est vide
+            🎒 Votre inventaire est vide
           </div>
         )}
       </div>

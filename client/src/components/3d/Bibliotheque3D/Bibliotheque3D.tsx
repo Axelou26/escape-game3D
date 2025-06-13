@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
-import { TextureLoader } from 'three';
 import { handlePointerLockErrors } from '../../../utils/errorHandler';
 
 // Géométries réutilisables
@@ -77,11 +76,10 @@ const bookColors = [
 
 interface Bibliotheque3DProps {
   onInteract: (objectId: string, objectType: string, action?: string) => void;
-  onDoorInteract?: (isCodeValid: boolean) => void;
   isCodeValid?: boolean;
 }
 
-export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDoorInteract, isCodeValid = false }) => {
+export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCodeValid = false }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<PointerLockControls | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -91,9 +89,6 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
     left: false,
     right: false,
   });
-  const playerVelocity = useRef(new THREE.Vector3());
-  const playerDirection = useRef(new THREE.Vector3());
-  const textureLoader = useRef(new TextureLoader());
   const sceneRef = useRef<THREE.Scene | null>(null);
   const collisionObjectsRef = useRef<THREE.Mesh[]>([]);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);

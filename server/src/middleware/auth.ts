@@ -36,7 +36,10 @@ export const authenticateToken = async (
   console.log('Token extrait:', token ? `${token.substring(0, 20)}...` : 'Aucun token');
 
   if (!token) {
-    throw new AppError(401, 'Token d\'authentification manquant');
+    return res.status(401).json({
+      status: 'error',
+      message: 'Token d\'authentification manquant'
+    });
   }
 
   try {
@@ -48,7 +51,10 @@ export const authenticateToken = async (
     console.log('Utilisateur trouvé:', user ? 'Oui' : 'Non');
     
     if (!user) {
-      throw new AppError(401, 'Utilisateur non trouvé');
+      return res.status(401).json({
+        status: 'error',
+        message: 'Utilisateur non trouvé'
+      });
     }
 
     req.user = {
@@ -61,6 +67,9 @@ export const authenticateToken = async (
     next();
   } catch (error) {
     console.error('❌ Erreur de vérification du token:', error);
-    throw new AppError(403, 'Token d\'authentification invalide');
+    return res.status(403).json({
+      status: 'error',
+      message: 'Token d\'authentification invalide'
+    });
   }
 }; 

@@ -60,4 +60,8 @@ export interface GameState {
   unlockedRooms: string[];
   solvedPuzzles: string[];
   microscopeEnigmeResolved: boolean;
+  periodicTableUnlocked?: boolean;
+  computerUnlocked?: boolean;
+  gameCompleted?: boolean;
+  artifactUnlocked?: boolean;
 } 

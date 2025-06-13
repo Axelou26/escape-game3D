@@ -25,6 +25,7 @@ class Game extends Model {
   public isCompleted!: boolean;
   public gameState!: GameState;
   public User?: User;
+  public ScoreEvents?: any[]; // Ajout de la propriété ScoreEvents
 }
 
 Game.init({

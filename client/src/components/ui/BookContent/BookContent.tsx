@@ -1,10 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { gameApi } from '../../../services/gameApi';
 
 interface BookContentProps {
   onClose: () => void;
 }
 
 export const BookContent: React.FC<BookContentProps> = ({ onClose }) => {
+  const [content, setContent] = useState<string>('Chargement du journal...');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadJournalContent = async () => {
+      try {
+        const journalData = await gameApi.getRiddleContent('professors-journal');
+        setContent(journalData.content.riddle);
+      } catch (error) {
+        console.error('Erreur lors du chargement du journal:', error);
+        setContent('Impossible de charger le contenu du journal.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadJournalContent();
+  }, []);
+
   return (
     <div style={{
       position: 'fixed',
@@ -35,26 +55,16 @@ export const BookContent: React.FC<BookContentProps> = ({ onClose }) => {
         fontFamily: 'serif',
         lineHeight: '1.6',
         textAlign: 'justify',
-        marginBottom: '20px'
+        marginBottom: '20px',
+        whiteSpace: 'pre-line'
       }}>
-        <p>
-          15 Octobre 1963
-        </p>
-        <p>
-        Il ne parle jamais,
-          Mais garde les souvenirs d’un temps révolu.
-
-          Son bois grince comme une mémoire fatiguée.
-
-          Cherche là où l’on range ce que l’on ne veut plus voir,
-          Là où l’ombre cache les vérités anciennes.
-
-          Ce que tu cherches est né
-          Quand l’homme posa un pied vers l’infini...*
-        </p>
-        <p>
-        La réponse est dans ce tiroir que plus personne n’ouvre.
-        </p>
+        {isLoading ? (
+          <div style={{ textAlign: 'center', fontStyle: 'italic' }}>
+            Chargement du journal...
+          </div>
+        ) : (
+          <p>{content}</p>
+        )}
       </div>
 
       <div style={{

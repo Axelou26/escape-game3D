@@ -45,18 +45,7 @@ export const RiddleContent: React.FC<RiddleContentProps> = ({ onClose, riddle })
         fontStyle: 'italic',
         whiteSpace: 'pre-line'
       }}>
-        {riddle?.content?.riddle || `Quatre marchaient vers la vérité, mais un seul menait le pas...
-
-Le troisième suit le deuxième, deux fois plus fort.
-
-Le premier ne partage rien : il est impair, plus grand que le dernier, et unique en son genre.
-
-Ensemble, ils valent 18.
-
-Aucun d’eux ne se ressemble.
-
-Et le deuxième est plus petit que le quatrième.`}
-
+        {riddle?.content?.riddle || 'Chargement de l\'énigme...'}
       </div>
 
       <div style={{

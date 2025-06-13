@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BibliothequeScene } from './3d/BibliothequeScene';
 import { LaboratoireScene } from './3d/LaboratoireScene';
@@ -9,64 +9,37 @@ import { RiddleContent } from './ui/RiddleContent/RiddleContent';
 import { CodeInput } from './ui/CodeInput/CodeInput';
 import { GameHUD } from './ui/GameHUD/GameHUD';
 import { PauseMenu } from './ui/PauseMenu/PauseMenu';
-import { GameState } from '../types/gameState';
-import { InventoryItem } from '../types/gameTypes';
-import { RiddleSecret1 } from './ui/RiddleSecret1/RiddleSecret1';
-import { RiddleSecret2 } from './ui/RiddleSecret2/RiddleSecret2';
-import { RiddleSecret3 } from './ui/RiddleSecret3/RiddleSecret3';
-import { RiddleSecret4 } from './ui/RiddleSecret4/RiddleSecret4';
+import { InventoryItem, GameState } from '../types/gameTypes';
 import './game/EscapeGame.css';
-import { ScoreEvents, ScoreEventType, updateScore } from '../types/scoreManager';
+import { scoreService, ScoreEventType } from '../services/scoreService';
+import { gameApi } from '../services/gameApi';
+import { gameStateApi } from '../services/gameStateApi';
+import { secureTimer, TimerState } from '../services/secureTimer';
+import { inventoryService } from '../services/inventoryService';
+
 
 // Configuration de l'API
-const API_URL = 'http://localhost:3001/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
 export const EscapeGame: React.FC = () => {
   const navigate = useNavigate();
   
-  // Fonction pour nettoyer l'inventaire des doublons
-  const cleanInventory = useCallback((inventory: InventoryItem[]): InventoryItem[] => {
-    const seen = new Set<string>();
-    return inventory.filter(item => {
-      if (seen.has(item.id)) {
-        console.warn(`Doublon détecté dans l'inventaire: ${item.id}`, item);
-        return false;
-      }
-      seen.add(item.id);
-      return true;
-    });
-  }, []);
-
   // État initial du jeu
-  const initialGameState: GameState = {
-    score: 1000,
+  const [gameState, setGameState] = useState<GameState>({
+    score: 0,
     elapsedTime: 0,
+    hintsUsed: 0,
+    attemptsCount: 0,
     currentRoom: 'library',
     inventory: [],
+    unlockedRooms: ['library'],
+    solvedPuzzles: [],
     microscopeEnigmeResolved: false,
     periodicTableUnlocked: false,
-    unlockedRooms: ['library'], 
     computerUnlocked: false,
     gameCompleted: false,
     artifactUnlocked: false
-  };
-
-  const [gameState, setGameStateRaw] = useState<GameState>(initialGameState);
-  
-  // Wrapper pour setGameState qui nettoie automatiquement l'inventaire
-  const setGameState = useCallback((newStateOrUpdater: GameState | ((prevState: GameState) => GameState)) => {
-    setGameStateRaw(prevState => {
-      const newState = typeof newStateOrUpdater === 'function' 
-        ? newStateOrUpdater(prevState) 
-        : newStateOrUpdater;
-      
-      // Nettoyer l'inventaire des doublons
-      return {
-        ...newState,
-        inventory: cleanInventory(newState.inventory)
-      };
-    });
-  }, [cleanInventory]);
+  });
 
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [currentCodeType, setCurrentCodeType] = useState<'drawer' | 'painting'>('drawer');
@@ -80,16 +53,8 @@ export const EscapeGame: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Ajout des états pour les statistiques
-  const [hintsUsed, setHintsUsed] = useState(0);
-  const [attemptsCount, setAttemptsCount] = useState(0);
-
   const [showPauseMenu, setShowPauseMenu] = useState(false);
 
-  const [showRiddleSecret1, setShowRiddleSecret1] = useState(false);
-  const [showRiddleSecret2, setShowRiddleSecret2] = useState(false);
-  const [showRiddleSecret3, setShowRiddleSecret3] = useState(false);
-  const [showRiddleSecret4, setShowRiddleSecret4] = useState(false);
   const [selectedRiddle, setSelectedRiddle] = useState<string | null>(null);
   // État pour savoir si le code du tableau a été validé
   const [isPaintingCodeValid, setIsPaintingCodeValid] = useState(false);
@@ -195,27 +160,38 @@ export const EscapeGame: React.FC = () => {
       const newState = { ...prevState, ...updates };
       // Nettoyer l'inventaire si il a été modifié
       if (updates.inventory) {
-        newState.inventory = cleanInventory(newState.inventory);
+                  // Inventaire nettoyé automatiquement par le service
       }
       if (!isOfflineMode) {
         saveGameState(newState).catch(console.error);
       }
       return newState;
     });
-  }, [isOfflineMode, saveGameState, cleanInventory]);
+  }, [isOfflineMode, saveGameState]);
 
   // Mettre à jour le score en fonction des événements
-  const handleScoreUpdate = useCallback((event: ScoreEventType) => {
-    setGameState(prevState => {
-      const newScore = updateScore(prevState.score, event);
-      return {
+  const handleScoreUpdate = useCallback(async (event: ScoreEventType, details?: string) => {
+    try {
+      const result = await scoreService.updateScore(event, details);
+      setGameState(prevState => ({
         ...prevState,
-        score: newScore
-      };
-    });
+        score: result.newScore
+      }));
+      
+      // Afficher un message si points gagnés/perdus
+      if (result.points !== 0) {
+        const message = result.points > 0 
+          ? `+${result.points} points !` 
+          : `${result.points} points`;
+        console.log(`Score mis à jour: ${message} (Total: ${result.newScore})`);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du score:', error);
+      // Le scoreService gère déjà le fallback en mode hors-ligne
+    }
   }, []);
 
-  const handleInteract = useCallback((objectId: string, objectType: string, action?: string, data?: any) => {
+  const handleInteract = useCallback(async (objectId: string, objectType: string, action?: string, data?: any) => {
     if (!action) return;
     
     if (isTransitioning && !['examine', 'feedback', 'checkBeakerSequence', 'enterCode', 'add_key_to_inventory', 'add_to_inventory'].includes(action)) {
@@ -313,180 +289,126 @@ export const EscapeGame: React.FC = () => {
         }
         break;
       case 'add_to_inventory':
-        handleScoreUpdate('ITEM_COLLECTED');
-        if (objectType === 'riddle' && data) {
-          const riddleItem: InventoryItem = {
-            id: data.id || `riddle-${Date.now()}`,
-            type: 'riddle',
-            name: data.name,
-            description: data.description,
-            content: data.content
-          };
-          
-          setGameState(prevState => {
-            // Vérifier si l'énigme n'est pas déjà dans l'inventaire
-            const riddleExists = prevState.inventory.some(item => item.id === riddleItem.id);
-            if (riddleExists) {
-              return prevState;
-            }
+        try {
+          let itemId: string;
+          let itemType: string;
+          let itemName: string;
+          let itemDescription: string;
+          let itemContent: any = undefined;
 
-            return {
-              ...prevState,
-              inventory: [...prevState.inventory, riddleItem]
-            };
-          });
-          setTimeout(() => setMessage(''), 3000);
-        } else if (objectId === 'mysterious-book') {
-          const bookItem: InventoryItem = {
-            id: 'professors-journal',
-            type: 'note',
-            name: 'Journal du Professeur',
-            description: 'Un vieux journal contenant des notes énigmatiques'
-          };
+          if (objectType === 'riddle' && data?.riddleId) {
+            // Récupérer l'énigme depuis l'API
+            const riddleData = await gameApi.getRiddleContent(data.riddleId);
+            itemId = data.riddleId;
+            itemType = 'riddle';
+            itemName = riddleData.name;
+            itemDescription = 'Une énigme mystérieuse...';
+            itemContent = riddleData.content;
+          } else if (objectId === 'mysterious-book') {
+            itemId = 'professors-journal';
+            itemType = 'note';
+            itemName = 'Journal du Professeur';
+            itemDescription = 'Un vieux journal contenant des notes énigmatiques';
+          } else if (objectId === 'shadow-riddle-symbol') {
+            const riddleData = await gameApi.getRiddleContent('riddle-shadow');
+            itemId = 'riddle-shadow';
+            itemType = 'riddle';
+            itemName = 'Énigme des Ombres';
+            itemDescription = 'Une énigme mystérieuse apparue sur le symbole mystique...';
+            itemContent = riddleData.content;
+          } else if (objectId === 'sun-symbol') {
+            const riddleData = await gameApi.getRiddleContent('riddle-light');
+            itemId = 'riddle-light';
+            itemType = 'riddle';
+            itemName = 'Énigme de la Lumière';
+            itemDescription = 'Une énigme mystérieuse gravée sur un symbole solaire...';
+            itemContent = riddleData.content;
+          } else if (objectId === 'ancient-book') {
+            const riddleData = await gameApi.getRiddleContent('riddle-wisdom');
+            itemId = 'riddle-wisdom';
+            itemType = 'riddle';
+            itemName = 'Énigme de Sagesse';
+            itemDescription = 'Une énigme cachée dans un livre ancien...';
+            itemContent = riddleData.content;
+          } else {
+            // Objet générique
+            itemId = data?.id || `item-${Date.now()}`;
+            itemType = objectType;
+            itemName = data?.name || 'Objet mystérieux';
+            itemDescription = data?.description || 'Un objet intriguant...';
+            itemContent = data?.content;
+          }
+
+          // Ajouter l'objet via le service sécurisé
+          const result = await inventoryService.addItem(itemId, itemType, itemName, itemDescription, itemContent);
           
-          setGameState(prevState => {
-            // Vérifier si l'item existe déjà dans l'état actuel
-            const itemExists = prevState.inventory.some(item => item.id === bookItem.id);
-            if (itemExists) {
-              return prevState;
-            }
-            
-            return {
-              ...prevState,
-              inventory: [...prevState.inventory, bookItem]
-            };
-          });
+          // Mettre à jour l'état local
+          setGameState(prevState => ({
+            ...prevState,
+            inventory: result.inventory as InventoryItem[]
+          }));
+
+          handleScoreUpdate('ITEM_COLLECTED');
+          setMessage(`${itemName} ajouté à l'inventaire !`);
           setTimeout(() => setMessage(''), 3000);
-        } else if (objectId === 'shadow-riddle-symbol') {
-          const shadowRiddle: InventoryItem = {
-            id: 'riddle-shadow',
-            type: 'riddle',
-            name: 'Énigme des Ombres',
-            description: 'Une énigme mystérieuse apparue sur le symbole mystique...',
-            content: {
-              riddle: "Je suis ton reflet sans lumière,\nJe te suis sans bruit, mais disparais dans l'obscurité.\nCompte mes lettres et tu trouveras un chiffre du code.\nQui suis-je ?",
-              answer: 'OMBRE'
-            }
-          };
-          setGameState(prevState => {
-            // Vérifier si l'item existe déjà dans l'état actuel
-            const itemExists = prevState.inventory.some(item => item.id === shadowRiddle.id);
-            if (itemExists) {
-              return prevState;
-            }
-            
-            return {
-              ...prevState,
-              inventory: [...prevState.inventory, shadowRiddle]
-            };
-          });
-          setTimeout(() => setMessage(''), 3000);
-        } else if (objectId === 'sun-symbol') {
-          const sunRiddle: InventoryItem = {
-            id: 'riddle-light',
-            type: 'riddle',
-            name: 'Énigme de la Lumière',
-            description: 'Une énigme mystérieuse gravée sur un symbole solaire...',
-            content: {
-              riddle: "Je commence au lever du jour,\nEt m'efface lorsque les paupières tombent.\nCompte le nombre de voyelles dans mon nom,\net tu connaîtras le chiffre du code.\nQui suis-je ?",
-              answer: "SOLEIL"
-            }
-          };
-          setGameState(prevState => {
-            // Vérifier si l'item existe déjà dans l'état actuel
-            const itemExists = prevState.inventory.some(item => item.id === sunRiddle.id);
-            if (itemExists) {
-              return prevState;
-            }
-            
-            return {
-              ...prevState,
-              inventory: [...prevState.inventory, sunRiddle]
-            };
-          });
-          setTimeout(() => setMessage(''), 3000);
-        } else if (objectId === 'ancient-book') {
-          const bookRiddle: InventoryItem = {
-            id: 'riddle-wisdom',
-            type: 'riddle',
-            name: 'Énigme de Sagesse',
-            description: 'Une énigme cachée dans un livre ancien...',
-            content: {
-              riddle: "Je porte les pensées d'un homme à un autre,\nJe traverse le monde sans bouger.\nObserve ma dernière lettre, trouve sa position dans l'alphabet,\net tu auras le e chiffre du code.\nQui suis-je ?",
-              answer: "LIVRE"
-            }
-          };
-          setGameState(prevState => {
-            // Vérifier si l'item existe déjà dans l'état actuel
-            const itemExists = prevState.inventory.some(item => item.id === bookRiddle.id);
-            if (itemExists) {
-              return prevState;
-            }
-            
-            return {
-              ...prevState,
-              inventory: [...prevState.inventory, bookRiddle]
-            };
-          });
+        } catch (error) {
+          console.error('Erreur lors de l\'ajout à l\'inventaire:', error);
+          setMessage('Erreur lors de l\'ajout à l\'inventaire');
           setTimeout(() => setMessage(''), 3000);
         }
         break;
 
       case 'add_to_inventory_riddle':
-        handleScoreUpdate('ITEM_COLLECTED');
-        const riddleItem: InventoryItem = {
-          id: 'riddle-ancient',
-          type: 'riddle',
-          name: 'Énigme Ancienne',
-          description: 'Une énigme qui semble liée au tableau...'
-        };
-        setGameState(prevState => {
-          // Vérifier si l'item existe déjà dans l'état actuel
-          const itemExists = prevState.inventory.some(item => item.id === riddleItem.id);
-          if (itemExists) {
-            return prevState;
-          }
+        try {
+          const result = await inventoryService.addItem(
+            'riddle-ancient',
+            'riddle',
+            'Énigme Ancienne',
+            'Une énigme qui semble liée au tableau...'
+          );
           
-          return {
+          setGameState(prevState => ({
             ...prevState,
-            inventory: [...prevState.inventory, riddleItem]
-          };
-        });
+            inventory: result.inventory as InventoryItem[]
+          }));
+
+          handleScoreUpdate('ITEM_COLLECTED');
+        } catch (error) {
+          console.error('Erreur lors de l\'ajout de l\'énigme:', error);
+        }
         break;
 
       case 'add_key_to_inventory':
-        handleScoreUpdate('ITEM_COLLECTED');
-        
-        let keyItem: InventoryItem;
-        if (objectId === 'crystal-key') {
-          keyItem = {
-            id: 'crystal-key',
-            type: 'key',
-            name: 'Clé en Cristal',
-            description: 'Une clé magnifique taillée dans un cristal translucide. Elle semble ouvrir quelque chose d\'important.'
-          };
-        } else {
-          // Clé du laboratoire par défaut
-          keyItem = {
-            id: 'laboratory-key',
-            type: 'key',
-            name: 'Clé du laboratoire',
-            description: 'Une clé ancienne qui semble ouvrir la porte du laboratoire secret.'
-          };
-        }
-        
-        setGameState(prevState => {
-          // Vérifier si l'item existe déjà dans l'état actuel
-          const itemExists = prevState.inventory.some(item => item.id === keyItem.id);
-          if (itemExists) {
-            return prevState;
+        try {
+          let keyId: string;
+          let keyName: string;
+          let keyDescription: string;
+
+          if (objectId === 'crystal-key') {
+            keyId = 'crystal-key';
+            keyName = 'Clé en Cristal';
+            keyDescription = 'Une clé magnifique taillée dans un cristal translucide. Elle semble ouvrir quelque chose d\'important.';
+          } else {
+            keyId = 'laboratory-key';
+            keyName = 'Clé du laboratoire';
+            keyDescription = 'Une clé ancienne qui ouvre la porte du laboratoire.';
           }
+
+          const result = await inventoryService.addItem(keyId, 'key', keyName, keyDescription);
           
-          return {
+          setGameState(prevState => ({
             ...prevState,
-            inventory: [...prevState.inventory, keyItem]
-          };
-        });
+            inventory: result.inventory as InventoryItem[]
+          }));
+
+          handleScoreUpdate('ITEM_COLLECTED');
+          setMessage(`${keyName} ajoutée à l'inventaire !`);
+          setTimeout(() => setMessage(''), 3000);
+        } catch (error) {
+          console.error('Erreur lors de l\'ajout de la clé:', error);
+          setMessage('Erreur lors de l\'ajout de la clé');
+          setTimeout(() => setMessage(''), 3000);
+        }
         break;
 
       case 'prompt_code':
@@ -561,7 +483,7 @@ export const EscapeGame: React.FC = () => {
               // Nettoyer l'inventaire des doublons lors du chargement
               const cleanedGameState = {
                 ...data.data.gameState,
-                inventory: cleanInventory(data.data.gameState.inventory || [])
+                inventory: data.data.gameState.inventory || []
               };
               setGameState(cleanedGameState);
               setMessage('Partie chargée avec succès');
@@ -609,87 +531,124 @@ export const EscapeGame: React.FC = () => {
     };
   }, []);
 
-  // Gérer la pénalité de temps
+  // Gérer le timer sécurisé
   useEffect(() => {
     if (isLoading || gameState.gameCompleted) return;
 
-    const interval = setInterval(() => {
+    // Callback pour les mises à jour du timer
+    const handleTimerUpdate = (timerState: TimerState) => {
       setGameState(prevState => {
-        // Arrêter le chronomètre si le jeu est terminé
         if (prevState.gameCompleted) {
           return prevState;
         }
-        
-        const newElapsedTime = prevState.elapsedTime + 1;
-        
-        // Appliquer la pénalité de temps seulement toutes les 2 minutes (120 secondes)
-        let newScore = prevState.score;
-        if (newElapsedTime > 0 && newElapsedTime % 120 === 0) {
-          newScore = updateScore(prevState.score, 'TIME_PENALTY');
+
+        // Mettre à jour avec les données du timer sécurisé
+        const newState = {
+          ...prevState,
+          elapsedTime: timerState.elapsedTime,
+          score: timerState.score || prevState.score // Garder le score local si pas de score serveur
+        };
+
+        return newState;
+      });
+
+      // Gérer la fin de jeu automatique
+      if (timerState.gameEnded) {
+        setGameState(prevState => ({
+          ...prevState,
+          gameCompleted: true
+        }));
+        setMessage('Temps de jeu dépassé ! Partie terminée automatiquement.');
+        setTimeout(() => {
+          endGame();
+          navigate('/game-intro');
+        }, 3000);
+      }
+    };
+
+    // Démarrer le timer sécurisé
+    secureTimer.onUpdate(handleTimerUpdate);
+    secureTimer.start(gameState.elapsedTime);
+
+    return () => {
+      secureTimer.removeCallback(handleTimerUpdate);
+      secureTimer.stop();
+    };
+  }, [isLoading, gameState.gameCompleted]); // Suppression des dépendances problématiques
+
+  // Sauvegarde automatique séparée
+  useEffect(() => {
+    if (!isOfflineMode && !isLoading) {
+      const timeoutId = setTimeout(() => {
+        saveGameState(gameState).catch(console.error);
+      }, 1000); // Sauvegarde avec délai pour éviter trop d'appels
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [gameState.elapsedTime, gameState.score, isOfflineMode, isLoading, saveGameState]);
+
+  const handleCodeSubmit = useCallback(async (code: string) => {
+    try {
+      // Trouver le puzzle correspondant au type de code actuel
+      let puzzleId: string;
+      if (currentCodeType === 'drawer') {
+        puzzleId = 'drawer-code';
+      } else if (currentCodeType === 'painting') {
+        puzzleId = 'painting-code';
+      } else {
+        console.error('Type de code non reconnu:', currentCodeType);
+        return;
+      }
+
+      // Valider le code via l'API
+      const result = await gameApi.validateCode(puzzleId, code);
+      
+      if (result.correct) {
+        // Mettre à jour le score
+        setGameState(prevState => ({
+          ...prevState,
+          score: result.newScore
+        }));
+
+        if (currentCodeType === 'drawer') {
+          // Ajouter l'énigme mathématique à l'inventaire
+          const riddleContent = await gameApi.getRiddleContent('riddle-mathematics');
+          const drawerRiddle: InventoryItem = {
+            id: riddleContent.id,
+            type: 'riddle',
+            name: riddleContent.name,
+            description: 'Une énigme mathématique trouvée dans le tiroir',
+            content: riddleContent.content
+          };
+          
+          updateGameState({
+            inventory: [...gameState.inventory, drawerRiddle]
+          });
+          setMessage('Code correct ! Vous avez trouvé une énigme !');
+        } else if (currentCodeType === 'painting') {
+          // Déverrouiller la clé du laboratoire
+          handleInteract('laboratory-key', 'key', 'add_key_to_inventory');
+          setMessage('Le mécanisme s\'active ! Une clé apparaît !');
+          setIsPaintingCodeValid(true);
         }
         
-        return {
-          ...prevState,
-          elapsedTime: newElapsedTime,
-          score: newScore
-        };
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isLoading, gameState.gameCompleted]);
-
-  const handleCodeSubmit = useCallback((code: string) => {
-    if (currentCodeType === 'drawer') {
-      if (code === '1963') {
-        handleScoreUpdate('CODE_CORRECT');
-        handleScoreUpdate('ITEM_COLLECTED');
-        const drawerRiddle: InventoryItem = {
-          id: 'riddle-mathematics',
-          type: 'riddle',
-          name: 'Énigme Mathématique',
-          description: 'Une énigme mathématique trouvée dans le tiroir',
-          content: {
-            riddle: `Quatre marchaient vers la vérité, mais un seul menait le pas...
-
-Le troisième suit le deuxième, deux fois plus fort.
-
-Le premier ne partage rien : il est impair, plus grand que le dernier, et unique en son genre.
-
-Ensemble, ils valent 18.
-
-Aucun d'eux ne se ressemble.
-
-Et le deuxième est plus petit que le quatrième.`,
-            answer: '7245'
-          }
-        };
-        
-        updateGameState({
-          inventory: [...gameState.inventory, drawerRiddle]
-        });
-        setMessage('Code correct ! Vous avez trouvé une énigme !');
         setShowCodeInput(false);
-      } else {
-        handleScoreUpdate('CODE_INCORRECT');
-        setCodeErrorMessage('Code incorrect');
-        setTimeout(() => setCodeErrorMessage(''), 3000);
-      }
-    } else if (currentCodeType === 'painting') {
-      if (code === '7245') {
-        handleScoreUpdate('CODE_CORRECT');
-        handleInteract('laboratory-key', 'key', 'add_key_to_inventory');
-        setMessage('Le mécanisme s\'active ! Une clé apparaît !');
-        setShowCodeInput(false);
-        setIsPaintingCodeValid(true);
         setTimeout(() => setMessage(''), 3000);
       } else {
-        handleScoreUpdate('CODE_INCORRECT');
-        setCodeErrorMessage('Code incorrect');
+        // Code incorrect
+        setGameState(prevState => ({
+          ...prevState,
+          score: result.newScore
+        }));
+        setCodeErrorMessage(result.message || 'Code incorrect');
         setTimeout(() => setCodeErrorMessage(''), 3000);
       }
+    } catch (error) {
+      console.error('Erreur lors de la validation du code:', error);
+      setCodeErrorMessage('Erreur de communication avec le serveur');
+      setTimeout(() => setCodeErrorMessage(''), 3000);
     }
-  }, [currentCodeType, handleInteract, gameState.inventory, updateGameState, handleScoreUpdate]);
+  }, [currentCodeType, handleInteract, gameState.inventory, updateGameState]);
 
   const handleUseItem = (item: InventoryItem) => {
     switch (item.id) {
@@ -819,7 +778,21 @@ Et le deuxième est plus petit que le quatrième.`,
       console.error('Erreur lors de la réinitialisation de la partie:', error);
       setMessage('Erreur lors de la réinitialisation. Tentative en mode local...');
       // Fallback en mode local si l'API échoue
-      setGameState(initialGameState);
+      setGameState({
+        score: 0,
+        elapsedTime: 0,
+        hintsUsed: 0,
+        attemptsCount: 0,
+        currentRoom: 'library',
+        inventory: [],
+        unlockedRooms: ['library'],
+        solvedPuzzles: [],
+        microscopeEnigmeResolved: false,
+        periodicTableUnlocked: false,
+        computerUnlocked: false,
+        gameCompleted: false,
+        artifactUnlocked: false
+      });
       setShowPauseMenu(false);
       setTimeout(() => setMessage(''), 3000);
     } finally {
@@ -832,29 +805,24 @@ Et le deuxième est plus petit que le quatrième.`,
     navigate('/intro');
   };
 
-  const handleInventoryItemClick = useCallback((item: InventoryItem) => {
-    if (item.id === 'riddle-shadow') {
-      setShowRiddleSecret1(true);
-      setSelectedRiddle(item.id);
-    } else if (item.id === 'riddle-mirror') {
-      setShowRiddleSecret2(true);
-      setSelectedRiddle(item.id);
-    } else if (item.id === 'riddle-wisdom') {
-      setShowRiddleSecret3(true);
-      setSelectedRiddle(item.id);
-    } else if (item.id === 'riddle-light') {
-      setShowRiddleSecret4(true);
-      setSelectedRiddle(item.id);
-    } else if (item.id === 'riddle-elements') {
-      setShowRiddle(true);
-      setCurrentRiddle(item);
-      setSelectedRiddle(item.id);
+  const handleInventoryItemClick = useCallback(async (item: InventoryItem) => {
+    // Pour les énigmes, utiliser l'API pour récupérer le contenu
+    if (item.type === 'riddle') {
+      try {
+        const riddleContent = await gameApi.getRiddleContent(item.id);
+        setCurrentRiddle({
+          ...item,
+          content: riddleContent.content
+        });
+        setShowRiddle(true);
+        setSelectedRiddle(item.id);
+      } catch (error) {
+        console.error('Erreur lors du chargement de l\'énigme:', error);
+        setMessage('Impossible de charger l\'énigme');
+        setTimeout(() => setMessage(''), 3000);
+      }
     } else if (item.id === 'professors-journal') {
       setShowBook(true);
-    } else if (item.id === 'riddle-mathematics') {
-      setShowRiddle(true);
-      setCurrentRiddle(item);
-      setSelectedRiddle(item.id);
     }
   }, []);
 
@@ -882,7 +850,7 @@ Et le deuxième est plus petit que le quatrième.`,
   }, []);
 
   const handleCodeFeedback = useCallback((isCorrect: boolean) => {
-    setAttemptsCount(prev => prev + 1);
+            setGameState(prev => ({ ...prev, attemptsCount: prev.attemptsCount + 1 }));
     if (isCorrect) {
       setMessage('Code correct !');
       setShowCodeInput(false);
@@ -950,8 +918,8 @@ Et le deuxième est plus petit que le quatrième.`,
           <GameHUD
             score={gameState.score}
             elapsedTime={gameState.elapsedTime}
-            hintsUsed={hintsUsed}
-            attemptsCount={attemptsCount}
+            hintsUsed={gameState.hintsUsed}
+            attemptsCount={gameState.attemptsCount}
           />
 
           {/* Panneau d'instructions */}
@@ -963,6 +931,7 @@ Et le deuxième est plus petit que le quatrième.`,
                 <li>ZQSD / Flèches : Se déplacer</li>
                 <li>Souris : Regarder autour</li>
                 <li>E / Clic : Interagir avec les objets</li>
+                <li>Échap : Interagir avec les objets de l'inventaire</li>
                 <li>M : Menu pause</li>
               </ul>
             </div>
@@ -1069,22 +1038,6 @@ Et le deuxième est plus petit que le quatrième.`,
                 onClose={() => setShowCodeInput(false)}
               />
             </>
-          )}
-
-          {showRiddleSecret1 && selectedRiddle === 'riddle-shadow' && (
-            <RiddleSecret1 onClose={() => setShowRiddleSecret1(false)} />
-          )}
-
-          {showRiddleSecret2 && selectedRiddle === 'riddle-mirror' && (
-            <RiddleSecret2 onClose={() => setShowRiddleSecret2(false)} />
-          )}
-
-          {showRiddleSecret3 && (
-            <RiddleSecret3 onClose={() => setShowRiddleSecret3(false)} />
-          )}
-
-          {showRiddleSecret4 && (
-            <RiddleSecret4 onClose={() => setShowRiddleSecret4(false)} />
           )}
         </>
       )}

@@ -6,6 +6,7 @@ import './LaboratoireScene.css';
 import { grey } from '@mui/material/colors';
 import { CodeInput } from '../../ui/CodeInput/CodeInput';
 import { handlePointerLockErrors } from '../../../utils/errorHandler';
+import { gameApi } from '../../../services/gameApi';
 
 interface LaboratoireSceneProps {
   onInteract: (objectId: string, objectType: string, action?: string, data?: any) => void;
@@ -99,87 +100,73 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
   }, [periodicTableUnlocked]);
 
   // Vérification de la séquence de couleurs
-  const checkColorSequence = useCallback((beakerId: string) => {
-    
+  const checkColorSequence = useCallback(async (beakerId: string) => {
+    try {
+      // Ajouter le bécher à la séquence actuelle
+      const newSequence = [...selectedBeakersRef.current, beakerId];
+      setSelectedBeakers(newSequence);
+      selectedBeakersRef.current = newSequence;
 
-    // Séquence correcte : rouge, orange, jaune, vert, bleu, violet
-    const correctSequence = [
-      'beaker-rouge',
-      'beaker-orange',
-      'beaker-jaune',
-      'beaker-vert',
-      'beaker-bleu',
-      'beaker-violet'
-    ] as const;
-
-    const colorNames: Record<typeof correctSequence[number], string> = {
-      'beaker-rouge': 'Rouge',
-      'beaker-orange': 'Orange',
-      'beaker-jaune': 'Jaune',
-      'beaker-vert': 'Vert',
-      'beaker-bleu': 'Bleu',
-      'beaker-violet': 'Violet'
-    };
-
-    
-    if (selectedBeakersRef.current.length === 0) {
-      // Vérifier si c'est bien le premier de la séquence correcte
-      if (beakerId === correctSequence[0]) {
-        const newSequence = [beakerId];
-        setSelectedBeakers(newSequence);
-        selectedBeakersRef.current = newSequence;
-      } else {
-        onInteract('sequence', 'feedback', 'feedback', 'incorrect');
-        onInteract('beaker-sequence', 'laboratory', 'checkBeakerSequence', { isCorrect: false });
-      }
-      return;
-    }
-
-    // Pour les clics suivants
-    const currentPosition = selectedBeakersRef.current.length;
-    const expectedBeaker = correctSequence[currentPosition];
-
-    // Si le mauvais bécher est cliqué
-    if (beakerId !== expectedBeaker) {
-      setSelectedBeakers([]);
-      selectedBeakersRef.current = [];
-      onInteract('sequence', 'feedback', 'feedback', 'incorrect');
-      onInteract('beaker-sequence', 'laboratory', 'checkBeakerSequence', { isCorrect: false });
-      return;
-    }
-
-    // Si le bon bécher est cliqué
-    const newSequence = [...selectedBeakersRef.current, beakerId];
-    setSelectedBeakers(newSequence);
-    selectedBeakersRef.current = newSequence;
-
-    // Si la séquence est complète
-    if (newSequence.length === correctSequence.length) {
-      setSelectedBeakers([]);
-      selectedBeakersRef.current = [];
-      
-      // Donner les points pour la séquence réussie
-      onInteract('beaker-sequence', 'laboratory', 'checkBeakerSequence', { isCorrect: true });
-      
-      // Mettre à jour l'état global et la ref
-      onUpdateGameState({ 
-        periodicTableUnlocked: true,
-        microscopeEnigmeResolved: true
-      });
-      
-      periodicTableStateRef.current = {
-        isLocked: false,
-        globalUnlocked: true,
-        riddleCollected: false
+      // Afficher un feedback visuel pour chaque bécher sélectionné
+      const colorNames = {
+        'beaker-rouge': 'Rouge',
+        'beaker-orange': 'Orange', 
+        'beaker-jaune': 'Jaune',
+        'beaker-vert': 'Vert',
+        'beaker-bleu': 'Bleu',
+        'beaker-violet': 'Violet'
       };
       
-      setIsPeriodicTableLocked(false);
-      
+      const currentColor = colorNames[beakerId as keyof typeof colorNames];
+      onInteract('sequence-progress', 'message', 'examine', 
+        `${currentColor} sélectionné (${newSequence.length}/6)`);
 
+      // Ne valider que si la séquence est complète (6 béchers)
+      if (newSequence.length === 6) {
+        const sequenceString = newSequence.join(',');
+        const validationResult = await gameApi.validateCode('beaker-sequence', sequenceString);
+
+        if (validationResult.correct) {
+          // Séquence complète et correcte
+          setSelectedBeakers([]);
+          selectedBeakersRef.current = [];
+          
+          // Donner les points pour la séquence réussie
+          onInteract('beaker-sequence', 'laboratory', 'checkBeakerSequence', { isCorrect: true });
+          
+          // Mettre à jour l'état global et la ref
+          onUpdateGameState({ 
+            periodicTableUnlocked: true,
+            microscopeEnigmeResolved: true
+          });
+          
+          periodicTableStateRef.current = {
+            isLocked: false,
+            globalUnlocked: true,
+            riddleCollected: false
+          };
+          
+          setIsPeriodicTableLocked(false);
+          
+          onInteract('sequence', 'message', 'examine', `Le mécanisme du tableau périodique s'active ! Allez examiner le tableau pour découvrir ce qui a changé...`);
+          
+          onInteract('periodic-table', 'state', 'unlock', { isLocked: false, globalUnlocked: true });
+        } else {
+          // Séquence complète mais incorrecte - réinitialiser avec pénalité
+          setSelectedBeakers([]);
+          selectedBeakersRef.current = [];
+          onInteract('sequence', 'feedback', 'feedback', 'incorrect');
+          onInteract('beaker-sequence', 'laboratory', 'checkBeakerSequence', { isCorrect: false });
+        }
+      }
+      // Si la séquence n'est pas complète, on continue sans valider ni pénaliser
       
-      onInteract('sequence', 'message', 'examine', `Le mécanisme du tableau périodique s'active ! Allez examiner le tableau pour découvrir ce qui a changé...`);
-      
-      onInteract('periodic-table', 'state', 'unlock', { isLocked: false, globalUnlocked: true });
+    } catch (error) {
+      console.error('Erreur lors de la vérification de la séquence:', error);
+      // En cas d'erreur API, réinitialiser la séquence
+      setSelectedBeakers([]);
+      selectedBeakersRef.current = [];
+      onInteract('sequence', 'feedback', 'feedback', 'error');
     }
   }, [onInteract, onUpdateGameState]);
 
@@ -298,7 +285,15 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
           case 'beaker-vert':
           case 'beaker-bleu':
           case 'beaker-violet':
-            checkColorSequence(object.userData.id);
+            // Vérifier si le bécher est déjà dans la séquence (pour permettre reset)
+            if (selectedBeakersRef.current.includes(object.userData.id)) {
+              // Double-clic sur un bécher déjà sélectionné = reset de la séquence
+              setSelectedBeakers([]);
+              selectedBeakersRef.current = [];
+              onInteract('sequence-reset', 'message', 'examine', 'Séquence réinitialisée. Recommencez la sélection.');
+            } else {
+              checkColorSequence(object.userData.id);
+            }
             break;
           case 'periodic-table':
             if (object.userData.type === 'state' && object.userData.action === 'unlock') {
@@ -320,21 +315,8 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
             } else {
               // Le tableau est déverrouillé - vérifier si l'énigme a été collectée
               if (!periodicTableStateRef.current.riddleCollected) {
-                const periodicTableRiddle = {
-                  id: 'riddle-elements',
-                  type: 'riddle',
-                  name: 'Énigme des Éléments',
-                  description: 'Une énigme mystérieuse apparue sur le tableau...',
-                  content: {
-                    riddle: "Mon premier : Je suis dans l'air sans y être. Je suis vital mais invisible. Mon symbole est un souffle, et sans moi, plus de feu.\n\n" +
-                            "Mon second : Je suis liquide et pourtant j'éteins le feu. Je tombe du ciel mais je peux inonder ton labo. On me voit mais je n'ai pas de couleur.\n\n" +
-                            "Pour finir : Je suis solide, je brille, je conduis l'électricité. Je suis souvent utilisé pour créer des alliages. Mon symbole commence par la 14e lettre de l'alphabet.",
-                    answer: 'OHN'
-                  }
-                };
-                
-                // Ajouter l'énigme à l'inventaire avec la bonne action
-                onInteract(object.userData.id, 'riddle', 'add_to_inventory', periodicTableRiddle);
+                // Récupérer l'énigme depuis l'API et l'ajouter à l'inventaire
+                onInteract('riddle-elements', 'riddle', 'add_to_inventory', { riddleId: 'riddle-elements' });
                 
                 // Message de confirmation
                 onInteract('periodic-table-message', 'message', 'examine', 'Une énigme mystérieuse est apparue sur le tableau périodique ! Elle a été ajoutée à votre inventaire.');
@@ -1619,36 +1601,45 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
   }, [initRenderer, onInteract, onUpdateGameState, handleInteraction, checkCollision]);
 
   // Gérer la soumission du code
-  const handleCodeSubmit = useCallback((code: string) => {
-    if (code === 'OHN') {
-      // Donner les points pour le code correct
-      onInteract('computer-code', 'security', 'enterCode', { isCorrect: true });
-      
-      labStateRef.current.isComputerUnlocked = true;
-      labStateRef.current.isLockerUnlocked = true;
-      onUpdateGameState({ computerUnlocked: true });
-      
-      // Donner la clé en cristal
-      onInteract('crystal-key', 'key', 'add_key_to_inventory');
-      
-      // Messages dans le jeu avec un type spécifique
-      onInteract('computer-message', 'notification', 'display', 'Code correct ! Accès système autorisé.');
-      onInteract('computer-message', 'notification', 'display', 'Déverrouillage du casier sécurisé en cours...');
-      setTimeout(() => {
-        onInteract('computer-message', 'notification', 'display', 'Le casier sécurisé est maintenant déverrouillé ! Vous pouvez maintenant l\'examiner pour découvrir ce qu\'il cache.');
-      }, 2000);
-    } else {
-      // Donner les points pour le code incorrect
-      onInteract('computer-code', 'security', 'enterCode', { isCorrect: false });
-      
-      labStateRef.current.computerAttempts++;
-      if (labStateRef.current.computerAttempts >= 3) {
-        onInteract('computer-message', 'notification', 'display', 'ATTENTION: Trop de tentatives incorrectes. Indice: Regardez l\'énigme du tableau périodique.');
-        labStateRef.current.computerAttempts = 0;
+  const handleCodeSubmit = useCallback(async (code: string) => {
+    try {
+      // Valider le code via l'API
+      const validationResult = await gameApi.validateCode('computer-code', code);
+
+      if (validationResult.correct) {
+        // Donner les points pour le code correct
+        onInteract('computer-code', 'security', 'enterCode', { isCorrect: true });
+        
+        labStateRef.current.isComputerUnlocked = true;
+        labStateRef.current.isLockerUnlocked = true;
+        onUpdateGameState({ computerUnlocked: true });
+        
+        // Donner la clé en cristal
+        onInteract('crystal-key', 'key', 'add_key_to_inventory');
+        
+        // Messages dans le jeu avec un type spécifique
+        onInteract('computer-message', 'notification', 'display', 'Code correct ! Accès système autorisé.');
+        onInteract('computer-message', 'notification', 'display', 'Déverrouillage du casier sécurisé en cours...');
+        setTimeout(() => {
+          onInteract('computer-message', 'notification', 'display', 'Le casier sécurisé est maintenant déverrouillé ! Vous pouvez maintenant l\'examiner pour découvrir ce qu\'il cache.');
+        }, 2000);
       } else {
-        setCodeErrorMessage('Code incorrect');
-        setTimeout(() => setCodeErrorMessage(''), 3000);
+        // Donner les points pour le code incorrect
+        onInteract('computer-code', 'security', 'enterCode', { isCorrect: false });
+        
+        labStateRef.current.computerAttempts++;
+        if (labStateRef.current.computerAttempts >= 3) {
+          onInteract('computer-message', 'notification', 'display', 'ATTENTION: Trop de tentatives incorrectes. Indice: Regardez l\'énigme du tableau périodique.');
+          labStateRef.current.computerAttempts = 0;
+        } else {
+          setCodeErrorMessage('Code incorrect');
+          setTimeout(() => setCodeErrorMessage(''), 3000);
+        }
       }
+    } catch (error) {
+      console.error('Erreur lors de la validation du code:', error);
+      setCodeErrorMessage('Erreur de connexion');
+      setTimeout(() => setCodeErrorMessage(''), 3000);
     }
     setShowCodeInput(false);
   }, [onInteract, onUpdateGameState]);

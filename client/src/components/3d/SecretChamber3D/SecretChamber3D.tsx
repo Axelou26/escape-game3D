@@ -3,12 +3,11 @@ import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
 import { GameState } from '../../../types/gameState';
 import './SecretChamber3D.css';
-import { RiddleSecret3 } from '../../ui/RiddleSecret3/RiddleSecret3';
-import { RiddleSecret4 } from '../../ui/RiddleSecret4/RiddleSecret4';
 import { CodeInput } from '../../ui/CodeInput/CodeInput';
 import { SuccessMessage } from '../../ui/SuccessMessage/SuccessMessage';
 import { useNavigate } from 'react-router-dom';
 import { handlePointerLockErrors } from '../../../utils/errorHandler';
+import { gameApi } from '../../../services/gameApi';
 
 
 
@@ -70,8 +69,6 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     artifactUnlocked: false
   });
 
-  const [showRiddleSecret3, setShowRiddleSecret3] = useState(false);
-  const [showRiddleSecret4, setShowRiddleSecret4] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const navigate = useNavigate();
 
@@ -148,18 +145,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     switch (id) {
       case 'ancient-book': {
         if (!riddleStateRef.current.bookRiddleCollected) {
-          const bookRiddle = {
-            id: 'riddle-wisdom',
-            type: 'riddle',
-            name: 'Énigme de Sagesse',
-            description: 'Une énigme cachée dans un livre ancien...',
-            content: {
-              riddle: "Je porte les pensées d'un homme à un autre,\nJe traverse le monde sans bouger.\nObserve ma dernière lettre, trouve sa position dans l'alphabet,\net tu auras le e chiffre du code.\nQui suis-je ?",
-              answer: "LIVRE"
-            }
-          };
-          onInteract?.(id, 'ancient-book', 'add_to_inventory', bookRiddle);
-          setShowRiddleSecret3(true);
+          onInteract?.(id, 'ancient-book', 'add_to_inventory');
           riddleStateRef.current.bookRiddleCollected = true;
         } else {
           onInteract?.('book-riddle-message', 'message', 'examine', 'Vous avez déjà récupéré l\'énigme de ce livre.');
@@ -168,17 +154,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       }
       case 'shadow-riddle-symbol': {
         if (!riddleStateRef.current.isCollected) {
-          const shadowRiddle = {
-            id: 'riddle-shadow',
-            type: 'riddle',
-            name: 'Énigme des Ombres',
-            description: 'Une énigme mystérieuse apparue sur le symbole mystique...',
-            content: {
-              riddle: "Je suis ton reflet sans lumière,\nJe te suis sans bruit, mais disparais dans l'obscurité.\nCompte mes lettres et tu trouveras un chiffre du code.\nQui suis-je ?",
-              answer: "OMBRE"
-            }
-          };
-          onInteract?.(id, type, 'add_to_inventory', shadowRiddle);
+          onInteract?.(id, type, 'add_to_inventory');
           onInteract?.('shadow-riddle-message', 'message', 'examine', 'Une énigme mystérieuse est apparue sur le symbole ! Elle a été ajoutée à votre inventaire.');
           riddleStateRef.current.isCollected = true;
         } else {
@@ -188,17 +164,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       }
       case 'mirror-riddle-glyph': {
         if (!riddleStateRef.current.mirrorRiddleCollected) {
-          const mirrorRiddle = {
-            id: 'riddle-mirror',
-            type: 'riddle',
-            name: 'Énigme du Miroir',
-            description: 'Une énigme gravée dans les hiéroglyphes...',
-            content: {
-              riddle: "Je reflète la vérité sans jamais parler.\nMa première lettre détient un nombre ancien.\nTrouve sa position dans l'alphabet, et tu sauras le chiffre.\nQui suis-je ?",
-              answer: "MIROIR"
-            }
-          };
-          onInteract?.(id, type, 'add_to_inventory', mirrorRiddle);
+          onInteract?.(id, type, 'add_to_inventory');
           onInteract?.('mirror-riddle-message', 'message', 'examine', 'Une énigme est apparue dans les hiéroglyphes ! Elle a été ajoutée à votre inventaire.');
           riddleStateRef.current.mirrorRiddleCollected = true;
         } else {
@@ -208,18 +174,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       }
       case 'sun-symbol': {
         if (!riddleStateRef.current.sunRiddleCollected) {
-          const sunRiddle = {
-            id: 'riddle-light',
-            type: 'riddle',
-            name: 'Énigme de la Lumière',
-            description: 'Une énigme mystérieuse gravée sur un symbole solaire...',
-            content: {
-              riddle: "Je commence au lever du jour,\nEt m'efface lorsque les paupières tombent.\nCompte le nombre de voyelles dans mon nom,\net tu connaîtras le chiffre du code.\nQui suis-je ?",
-              answer: "SOLEIL"
-            }
-          };
-          onInteract?.(id, 'sun-symbol', 'add_to_inventory', sunRiddle);
-          setShowRiddleSecret4(true);
+          onInteract?.(id, 'sun-symbol', 'add_to_inventory');
           riddleStateRef.current.sunRiddleCollected = true;
         } else {
           onInteract?.('sun-riddle-message', 'message', 'examine', 'Vous avez déjà récupéré l\'énigme de ce symbole solaire.');
@@ -239,27 +194,37 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     }
   }, [onInteract, artifactUnlocked]);
 
-  const handleCodeSubmit = useCallback((code: string) => {
-    if (code === '6353') {
-      // Code correct : +200 points et arrêt du jeu
-      onInteract?.('final-code', 'security', 'enterCode', { isCorrect: true, isGameComplete: true });
+  const handleCodeSubmit = useCallback(async (code: string) => {
+    try {
+      // Valider le code via l'API backend
+      const result = await gameApi.validateCode('final-code', code);
       
-      setArtifactUnlocked(true);
-      setShowCodeInput(false);
-      setShowSuccessMessage(true);
-      if (onUpdateGameState) {
-        const updates: Partial<GameState> = {
-          artifactUnlocked: true,
-          gameCompleted: true
-        };
-        onUpdateGameState(updates);
+      if (result.correct) {
+        // Code correct : +200 points et arrêt du jeu
+        onInteract?.('final-code', 'security', 'enterCode', { isCorrect: true, isGameComplete: true });
+        
+        setArtifactUnlocked(true);
+        setShowCodeInput(false);
+        setShowSuccessMessage(true);
+        if (onUpdateGameState) {
+          const updates: Partial<GameState> = {
+            artifactUnlocked: true,
+            gameCompleted: true
+          };
+          onUpdateGameState(updates);
+        }
+      } else {
+        // Code incorrect : -10 points
+        onInteract?.('final-code', 'security', 'enterCode', { isCorrect: false });
+        setErrorMessage('Code incorrect');
+        setTimeout(() => setErrorMessage(''), 3000);
       }
-    } else {
-      // Code incorrect : -10 points
-      onInteract?.('final-code', 'security', 'enterCode', { isCorrect: false });
-      setErrorMessage('Code incorrect');
+    } catch (error) {
+      console.error('Erreur lors de la validation du code final:', error);
+      setErrorMessage('Erreur de connexion');
       setTimeout(() => setErrorMessage(''), 3000);
     }
+    
     if (controlsRef.current) {
       controlsRef.current.lock();
     }
@@ -1240,17 +1205,11 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
         ref={mountRef}
         className="secret-chamber-container"
         style={{ width: '100%', height: '100%' }}
-      />
+      /> 
       <div className="secret-chamber-crosshair">
         <div className="secret-chamber-crosshair-vertical" />
         <div className="secret-chamber-crosshair-horizontal" />
       </div>
-      {showRiddleSecret3 && (
-        <RiddleSecret3 onClose={() => setShowRiddleSecret3(false)} />
-      )}
-      {showRiddleSecret4 && (
-        <RiddleSecret4 onClose={() => setShowRiddleSecret4(false)} />
-      )}
       {showCodeInput && (
         <CodeInput 
           onSubmit={handleCodeSubmit}

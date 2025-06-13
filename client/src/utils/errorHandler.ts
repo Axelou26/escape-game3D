@@ -198,4 +198,28 @@ export function handlePointerLockErrors(controls: any): void {
       };
     }
   }
+}
+
+/**
+ * Gestionnaire d'erreurs générique pour les services
+ */
+export function handleError(error: any, context?: string): void {
+  const errorMessage = error?.message || error?.toString() || 'Erreur inconnue';
+  
+  // Filtrer les erreurs connues
+  if (shouldFilterMessage(errorMessage)) {
+    return;
+  }
+  
+  // Afficher l'erreur avec le contexte
+  if (context) {
+    console.error(`${context}:`, errorMessage);
+  } else {
+    console.error('Erreur:', errorMessage);
+  }
+  
+  // En mode développement, afficher la stack trace
+  if (process.env.NODE_ENV === 'development' && error?.stack) {
+    console.error('Stack trace:', error.stack);
+  }
 } 
