@@ -24,7 +24,7 @@ export class LibraryInteractionHandler {
       case 'locked-drawer':
         this.handleDrawerInteraction(object);
         break;
-      case 'riddle-paper':
+      case 'riddle-mathematics':
         this.handleRiddlePaperInteraction(object);
         break;
       case 'painting':
@@ -61,12 +61,12 @@ export class LibraryInteractionHandler {
 
   private handleDrawerInteraction(drawer: InteractiveObject): void {
     const riddleItem: InventoryItem = {
-      id: 'riddle-paper',
-      type: 'clue',
-      name: 'Énigme mystérieuse',
-      description: 'Une énigme qui semble liée au tableau...'
+      id: 'riddle-mathematics',
+      type: 'riddle',
+      name: 'Énigme Mathématique',
+      description: 'Une énigme mathématique qui semble liée au tableau...'
     };
-    if (!this.gameState.inventory.some(item => item.id === 'riddle-paper')) {
+    if (!this.gameState.inventory.some(item => item.id === 'riddle-mathematics')) {
       const code = prompt('Le tiroir semble verrouillé. Entrez le code :');
       if (code === '1963') {
         this.updateGameState({

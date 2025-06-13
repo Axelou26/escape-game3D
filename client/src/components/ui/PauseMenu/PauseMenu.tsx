@@ -28,6 +28,10 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
         <div className="pause-menu-content">
           <div className="pause-menu-section">
             <div className="pause-menu-buttons">
+            <button onClick={onClose} className="menu-button resume-button">
+                <span className="button-icon">▶️</span>
+                Reprendre
+              </button>
               <button onClick={onRestart} className="menu-button restart-button">
                 <span className="button-icon">🔄</span>
                 Recommencer
@@ -35,10 +39,6 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
               <button onClick={onReturnToIntro} className="menu-button intro-button">
                 <span className="button-icon">🏠</span>
                 Retour à l'intro
-              </button>
-              <button onClick={onClose} className="menu-button resume-button">
-                <span className="button-icon">▶️</span>
-                Reprendre
               </button>
             </div>
           </div>

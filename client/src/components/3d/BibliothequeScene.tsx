@@ -9,13 +9,15 @@ interface BibliothequeSceneProps {
   inventory?: InventoryItem[];
   showMessage?: (message: string) => void;
   onUpdateGameState?: (updates: Partial<GameState>) => void;
+  isCodeValid?: boolean;
 }
 
 export const BibliothequeScene: React.FC<BibliothequeSceneProps> = ({
   onInteract,
   inventory = [],
   showMessage,
-  onUpdateGameState
+  onUpdateGameState,
+  isCodeValid = false
 }) => {
   const [examinedObject, setExaminedObject] = useState<{ id: string; type: string; description: string; } | null>(null);
   const [showBook, setShowBook] = useState(false);
@@ -26,6 +28,14 @@ export const BibliothequeScene: React.FC<BibliothequeSceneProps> = ({
 
   // Gestionnaire d'interactions local
   const handleInteraction = (objectId: string, objectType: string, action?: string) => {
+    // Pour les actions spéciales, les déléguer directement sans interception
+    if (action === 'enter_laboratory' || action === 'prompt_painting_code') {
+      if (onInteract) {
+        onInteract(objectId, objectType, action);
+      }
+      return;
+    }
+
     // Déléguer toute la logique d'ajout d'objets à EscapeGame
     if (onInteract) {
       onInteract(objectId, objectType, action);
@@ -37,7 +47,7 @@ export const BibliothequeScene: React.FC<BibliothequeSceneProps> = ({
         switch (objectId) {
           case 'painting':
             if (onInteract) {
-              onInteract('painting', 'interactive', 'prompt_painting_code');
+              onInteract('painting', 'painting', 'prompt_painting_code');
             }
             return; 
           case 'laboratory-door':
@@ -57,7 +67,7 @@ export const BibliothequeScene: React.FC<BibliothequeSceneProps> = ({
 
   return (
     <>
-      <Bibliotheque3D onInteract={handleInteraction} />
+      <Bibliotheque3D onInteract={handleInteraction} isCodeValid={isCodeValid} />
 
       {/* Affichage de l'objet examiné */}
       {examinedObject && (

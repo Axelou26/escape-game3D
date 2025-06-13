@@ -47,6 +47,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
   const handleClickRef = useRef<(() => void) | null>(null);
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [artifactUnlocked, setArtifactUnlocked] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
   
   // Ajouter une ref pour l'état de l'énigme
   const riddleStateRef = useRef({
@@ -134,7 +135,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     }
 
     // Position et orientation
-    sunGroup.position.set(7, 2.5, -5);
+    sunGroup.position.set(5.2, 2.5, -8.2);
     sunGroup.rotation.y = -Math.PI / 4;
 
     makeInteractive(sunGroup, 'sun-symbol', 'symbol');
@@ -148,9 +149,9 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       case 'ancient-book': {
         if (!riddleStateRef.current.bookRiddleCollected) {
           const bookRiddle = {
-            id: 'book-riddle',
+            id: 'riddle-wisdom',
             type: 'riddle',
-            name: 'Énigme du Livre',
+            name: 'Énigme de Sagesse',
             description: 'Une énigme cachée dans un livre ancien...',
             content: {
               riddle: "Je porte les pensées d'un homme à un autre,\nJe traverse le monde sans bouger.\nObserve ma dernière lettre, trouve sa position dans l'alphabet,\net tu auras le e chiffre du code.\nQui suis-je ?",
@@ -168,9 +169,9 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       case 'shadow-riddle-symbol': {
         if (!riddleStateRef.current.isCollected) {
           const shadowRiddle = {
-            id: 'shadow-riddle',
+            id: 'riddle-shadow',
             type: 'riddle',
-            name: 'Énigme de l\'Ombre',
+            name: 'Énigme des Ombres',
             description: 'Une énigme mystérieuse apparue sur le symbole mystique...',
             content: {
               riddle: "Je suis ton reflet sans lumière,\nJe te suis sans bruit, mais disparais dans l'obscurité.\nCompte mes lettres et tu trouveras un chiffre du code.\nQui suis-je ?",
@@ -188,7 +189,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       case 'mirror-riddle-glyph': {
         if (!riddleStateRef.current.mirrorRiddleCollected) {
           const mirrorRiddle = {
-            id: 'mirror-riddle',
+            id: 'riddle-mirror',
             type: 'riddle',
             name: 'Énigme du Miroir',
             description: 'Une énigme gravée dans les hiéroglyphes...',
@@ -208,7 +209,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       case 'sun-symbol': {
         if (!riddleStateRef.current.sunRiddleCollected) {
           const sunRiddle = {
-            id: 'sun-riddle',
+            id: 'riddle-light',
             type: 'riddle',
             name: 'Énigme de la Lumière',
             description: 'Une énigme mystérieuse gravée sur un symbole solaire...',
@@ -256,7 +257,8 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     } else {
       // Code incorrect : -10 points
       onInteract?.('final-code', 'security', 'enterCode', { isCorrect: false });
-      onInteract?.('artifact-wrong-code', 'message', 'examine', 'Code incorrect. Essayez encore.');
+      setErrorMessage('Code incorrect');
+      setTimeout(() => setErrorMessage(''), 3000);
     }
     if (controlsRef.current) {
       controlsRef.current.lock();
@@ -319,7 +321,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       newPosition.add(direction.multiplyScalar(z));
     }
 
-    // Limiter la position du joueur aux murs de la salle (forme circulaire)
+    // Limiter la position du joueur aux murs de la salle
     const radius = 9.5;
     const positionCheck = newPosition.clone();
     positionCheck.y = 0;
@@ -715,8 +717,8 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
 
       // Feu de la torche (lumière)
       const fireLight = new THREE.PointLight(0xff6600, 4, 5);
-      fireLight.position.z = 0.25; // Position de la lumière
-      fireLight.position.y = 0.5; // Monter la lumière au bout de la torche
+      fireLight.position.z = 0.25; 
+      fireLight.position.y = 0.5; 
       torchGroup.add(fireLight);
 
       // Effet de particules de feu
@@ -727,8 +729,8 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
         opacity: 0.7
       });
       const fire = new THREE.Mesh(fireGeometry, fireMaterial);
-      fire.position.z = 0.25; // Position de la boule de feu
-      fire.position.y = 0.5; // Monter la boule de feu au bout de la torche
+      fire.position.z = 0.25; 
+      fire.position.y = 0.5; 
       torchGroup.add(fire);
 
       torchGroup.position.copy(position);
@@ -749,7 +751,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       ];
       torchPositions.forEach(({ pos, rot }) => {
         const torch = createTorch(pos);
-        torch.rotation.y = rot; // Rotation simple sur l'axe Y
+        torch.rotation.y = rot; 
         scene.add(torch);
       });
 
@@ -975,10 +977,10 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       const light = new THREE.SpotLight(color, 2.0); // Intensité encore plus forte
       light.position.copy(position);
       light.target.position.copy(target);
-      light.angle = Math.PI / 3; // Angle encore plus large
-      light.penumbra = 0.8; // Bords encore plus doux
-      light.decay = 1.2; // Décroissance encore plus faible
-      light.distance = 25; // Portée augmentée
+      light.angle = Math.PI / 3; 
+      light.penumbra = 0.8; 
+      light.decay = 1.2; 
+      light.distance = 25; 
       light.castShadow = true;
       scene.add(light);
       scene.add(light.target);
@@ -1139,16 +1141,16 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     return () => {
       console.log("Début du démontage du composant");
       
-      // 1. Marquer le composant comme en cours de démontage
+      //Marquer le composant comme en cours de démontage
       isMountedRef.current = false;
       
-      // 2. Nettoyer les animations
+      //  Nettoyer les animations
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = undefined;
       }
 
-      // 3. Nettoyer les événements
+      //  Nettoyer les événements
       if (handleResizeRef.current) {
         window.removeEventListener('resize', handleResizeRef.current);
         handleResizeRef.current = null;
@@ -1166,7 +1168,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
         handleClickRef.current = null;
       }
 
-      // 4. Nettoyer Three.js
+      // Nettoyer Three.js
       if (sceneRef.current) {
         sceneRef.current.traverse((object) => {
           if (object instanceof THREE.Mesh) {
@@ -1181,7 +1183,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
         sceneRef.current = null;
       }
 
-      // 5. Nettoyer le renderer
+      // Nettoyer le renderer
       if (rendererRef.current) {
         if (mountRef.current?.contains(rendererRef.current.domElement)) {
           mountRef.current.removeChild(rendererRef.current.domElement);
@@ -1190,11 +1192,11 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
         rendererRef.current = null;
       }
 
-      // 6. Réinitialiser les autres refs
+      //  Réinitialiser les autres refs
       cameraRef.current = null;
       controlsRef.current = null;
 
-      // 7. Marquer comme complètement disposé
+      //  Marquer comme complètement disposé
       isDisposedRef.current = true;
       isInitializedRef.current = false;
 
@@ -1262,6 +1264,25 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       )}
       {showSuccessMessage && (
         <SuccessMessage onClose={handleSuccessClose} />
+      )}
+      {errorMessage && (
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'rgba(220, 53, 69, 0.9)',
+          color: 'white',
+          padding: '15px 30px',
+          borderRadius: '8px',
+          fontSize: '18px',
+          fontWeight: 'bold',
+          zIndex: 1003,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          border: '2px solid #dc3545'
+        }}>
+          {errorMessage}
+        </div>
       )}
     </>
   );

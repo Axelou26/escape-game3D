@@ -22,12 +22,24 @@ export const Inventory: React.FC<InventoryProps> = ({ items, onUseItem, onItemCl
         return '🔑';
       case 'note':
         return '📜';
-      case 'tool':
-        return '🔧';
-      case 'clue':
-        return '🔍';
       case 'riddle':
-        return '📖';
+        // Emojis spéciaux pour chaque énigme selon leur ID
+        switch (id) {
+          case 'riddle-mathematics':
+            return '🧮';
+          case 'riddle-mirror':
+            return '🪞';
+          case 'riddle-elements':
+            return '🔥';
+          case 'riddle-wisdom':
+            return '🦉';
+          case 'riddle-shadow':
+            return '🌙';
+          case 'riddle-light':
+            return '☀️';
+          default:
+            return '📖';
+        }
       default:
         return '❓';
     }

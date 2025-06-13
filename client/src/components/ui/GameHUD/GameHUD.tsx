@@ -34,16 +34,6 @@ export const GameHUD: React.FC<GameHUDProps> = ({ score, elapsedTime, hintsUsed,
         <div className="hud-label">Temps</div>
         <div className="hud-value">{timeDisplay}</div>
       </div>
-      <div className="hud-section stats">
-        <div className="stat-item">
-          <div className="stat-label">Indices utilisés</div>
-          <div className="stat-value">{hintsUsed}</div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-label">Tentatives</div>
-          <div className="stat-value">{attemptsCount}</div>
-        </div>
       </div>
-    </div>
   );
 }; 

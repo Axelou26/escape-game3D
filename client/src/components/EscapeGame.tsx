@@ -71,6 +71,7 @@ export const EscapeGame: React.FC = () => {
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [currentCodeType, setCurrentCodeType] = useState<'drawer' | 'painting'>('drawer');
   const [message, setMessage] = useState<string>('');
+  const [codeErrorMessage, setCodeErrorMessage] = useState<string>('');
   const [showBook, setShowBook] = useState(false);
   const [showRiddle, setShowRiddle] = useState(false);
   const [currentRiddle, setCurrentRiddle] = useState<InventoryItem | undefined>();
@@ -90,6 +91,14 @@ export const EscapeGame: React.FC = () => {
   const [showRiddleSecret3, setShowRiddleSecret3] = useState(false);
   const [showRiddleSecret4, setShowRiddleSecret4] = useState(false);
   const [selectedRiddle, setSelectedRiddle] = useState<string | null>(null);
+  // État pour savoir si le code du tableau a été validé
+  const [isPaintingCodeValid, setIsPaintingCodeValid] = useState(false);
+
+  // Mettre à jour isPaintingCodeValid quand l'inventaire change
+  useEffect(() => {
+    const hasKey = gameState.inventory.some(item => item.id === 'laboratory-key');
+    setIsPaintingCodeValid(hasKey);
+  }, [gameState.inventory]);
 
   // Définition des fonctions de base
   const saveGameState = useCallback(async (newState: GameState) => {
@@ -350,9 +359,9 @@ export const EscapeGame: React.FC = () => {
           setTimeout(() => setMessage(''), 3000);
         } else if (objectId === 'shadow-riddle-symbol') {
           const shadowRiddle: InventoryItem = {
-            id: 'shadow-riddle',
+            id: 'riddle-shadow',
             type: 'riddle',
-            name: 'Énigme de l\'Ombre',
+            name: 'Énigme des Ombres',
             description: 'Une énigme mystérieuse apparue sur le symbole mystique...',
             content: {
               riddle: "Je suis ton reflet sans lumière,\nJe te suis sans bruit, mais disparais dans l'obscurité.\nCompte mes lettres et tu trouveras un chiffre du code.\nQui suis-je ?",
@@ -374,7 +383,7 @@ export const EscapeGame: React.FC = () => {
           setTimeout(() => setMessage(''), 3000);
         } else if (objectId === 'sun-symbol') {
           const sunRiddle: InventoryItem = {
-            id: 'sun-riddle',
+            id: 'riddle-light',
             type: 'riddle',
             name: 'Énigme de la Lumière',
             description: 'Une énigme mystérieuse gravée sur un symbole solaire...',
@@ -398,9 +407,9 @@ export const EscapeGame: React.FC = () => {
           setTimeout(() => setMessage(''), 3000);
         } else if (objectId === 'ancient-book') {
           const bookRiddle: InventoryItem = {
-            id: 'book-riddle',
+            id: 'riddle-wisdom',
             type: 'riddle',
-            name: 'Énigme du Livre',
+            name: 'Énigme de Sagesse',
             description: 'Une énigme cachée dans un livre ancien...',
             content: {
               riddle: "Je porte les pensées d'un homme à un autre,\nJe traverse le monde sans bouger.\nObserve ma dernière lettre, trouve sa position dans l'alphabet,\net tu auras le e chiffre du code.\nQui suis-je ?",
@@ -426,9 +435,9 @@ export const EscapeGame: React.FC = () => {
       case 'add_to_inventory_riddle':
         handleScoreUpdate('ITEM_COLLECTED');
         const riddleItem: InventoryItem = {
-          id: 'drawer-riddle',
-          type: 'clue',
-          name: 'Énigme mystérieuse',
+          id: 'riddle-ancient',
+          type: 'riddle',
+          name: 'Énigme Ancienne',
           description: 'Une énigme qui semble liée au tableau...'
         };
         setGameState(prevState => {
@@ -636,10 +645,10 @@ export const EscapeGame: React.FC = () => {
         handleScoreUpdate('CODE_CORRECT');
         handleScoreUpdate('ITEM_COLLECTED');
         const drawerRiddle: InventoryItem = {
-          id: 'drawer-riddle',
+          id: 'riddle-mathematics',
           type: 'riddle',
-          name: 'Énigme du Tiroir',
-          description: 'Une énigme mystérieuse trouvée dans le tiroir',
+          name: 'Énigme Mathématique',
+          description: 'Une énigme mathématique trouvée dans le tiroir',
           content: {
             riddle: `Quatre marchaient vers la vérité, mais un seul menait le pas...
 
@@ -663,8 +672,8 @@ Et le deuxième est plus petit que le quatrième.`,
         setShowCodeInput(false);
       } else {
         handleScoreUpdate('CODE_INCORRECT');
-        setMessage('Code incorrect');
-        setTimeout(() => setMessage(''), 2000);
+        setCodeErrorMessage('Code incorrect');
+        setTimeout(() => setCodeErrorMessage(''), 3000);
       }
     } else if (currentCodeType === 'painting') {
       if (code === '7245') {
@@ -672,10 +681,12 @@ Et le deuxième est plus petit que le quatrième.`,
         handleInteract('laboratory-key', 'key', 'add_key_to_inventory');
         setMessage('Le mécanisme s\'active ! Une clé apparaît !');
         setShowCodeInput(false);
+        setIsPaintingCodeValid(true);
+        setTimeout(() => setMessage(''), 3000);
       } else {
         handleScoreUpdate('CODE_INCORRECT');
-        setMessage('Rien ne se passe...');
-        setTimeout(() => setMessage(''), 2000);
+        setCodeErrorMessage('Code incorrect');
+        setTimeout(() => setCodeErrorMessage(''), 3000);
       }
     }
   }, [currentCodeType, handleInteract, gameState.inventory, updateGameState, handleScoreUpdate]);
@@ -916,6 +927,7 @@ Et le deuxième est plus petit que le quatrième.`,
                 onUpdateGameState={updateGameState}
                 inventory={gameState.inventory}
                 showMessage={setMessage}
+                isCodeValid={isPaintingCodeValid}
               />
             )}
             {gameState.currentRoom === 'laboratory' && (
@@ -1010,6 +1022,27 @@ Et le deuxième est plus petit que le quatrième.`,
           {message && (
             <div className="game-message">
               {message}
+            </div>
+          )}
+
+          {/* Message d'erreur de code */}
+          {codeErrorMessage && (
+            <div style={{
+              position: 'fixed',
+              bottom: '20px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              backgroundColor: 'rgba(220, 53, 69, 0.9)',
+              color: 'white',
+              padding: '15px 30px',
+              borderRadius: '8px',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              zIndex: 1003,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              border: '2px solid #dc3545'
+            }}>
+              {codeErrorMessage}
             </div>
           )}
 

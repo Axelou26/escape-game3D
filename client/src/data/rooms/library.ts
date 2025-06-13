@@ -41,7 +41,7 @@ export const libraryRoom: Room = {
         solution: '1963',
         hints: ['Le marque-page pourrait contenir un indice...']
       },
-      providesItems: ['riddle-paper'],
+      providesItems: ['riddle-mathematics'],
     },
     
     {
@@ -59,6 +59,36 @@ export const libraryRoom: Room = {
         hints: ['La solution à l\'énigme du papier pourrait être utile...']
       },
       providesItems: ['laboratory-key'],
+    },
+    {
+      id: 'riddle-mathematics',
+      name: 'Énigme Mathématique',
+      type: 'riddle',
+      position: { x: 0, y: 0, z: 0 },
+      isActive: false,
+      isHighlighted: false,
+      blocksMovement: false,
+      description: 'Une énigme mathématique complexe gravée sur un papier ancien. "Si 2+2=4 et 3+3=9, alors 4+4=?" La réponse est 7245.',
+    },
+    {
+      id: 'riddle-ancient',
+      name: 'Énigme Ancienne',
+      type: 'riddle',
+      position: { x: -8, y: 2.5, z: -2 },
+      isActive: true,
+      isHighlighted: false,
+      blocksMovement: false,
+      description: 'Un parchemin ancien avec des symboles mystérieux. Cette énigme semble révéler des secrets du passé.',
+    },
+    {
+      id: 'riddle-wisdom',
+      name: 'Énigme de Sagesse',
+      type: 'riddle',
+      position: { x: 1, y: 3, z: -7 },
+      isActive: true,
+      isHighlighted: false,
+      blocksMovement: false,
+      description: 'Un livre de sagesse contenant une énigme philosophique profonde.',
     },
     {
       id: 'laboratory-key',

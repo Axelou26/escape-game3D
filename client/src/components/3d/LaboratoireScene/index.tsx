@@ -38,6 +38,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
   const selectedBeakersRef = useRef<string[]>([]);
   const [isPeriodicTableLocked, setIsPeriodicTableLocked] = useState(!periodicTableUnlocked);
   const [showCodeInput, setShowCodeInput] = useState(false);
+  const [codeErrorMessage, setCodeErrorMessage] = useState<string>('');
 
   // Ajouter une ref pour stocker l'état persistant du tableau
   const periodicTableStateRef = useRef({
@@ -120,7 +121,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       'beaker-violet': 'Violet'
     };
 
-    // Si c'est le premier clic (aucun bécher sélectionné)
+    
     if (selectedBeakersRef.current.length === 0) {
       // Vérifier si c'est bien le premier de la séquence correcte
       if (beakerId === correctSequence[0]) {
@@ -320,9 +321,9 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
               // Le tableau est déverrouillé - vérifier si l'énigme a été collectée
               if (!periodicTableStateRef.current.riddleCollected) {
                 const periodicTableRiddle = {
-                  id: 'periodic-table-elements-riddle',
+                  id: 'riddle-elements',
                   type: 'riddle',
-                  name: 'Énigme des éléments chimiques',
+                  name: 'Énigme des Éléments',
                   description: 'Une énigme mystérieuse apparue sur le tableau...',
                   content: {
                     riddle: "Mon premier : Je suis dans l'air sans y être. Je suis vital mais invisible. Mon symbole est un souffle, et sans moi, plus de feu.\n\n" +
@@ -461,13 +462,13 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     return () => {
       isMountedRef.current = false;
       
-      // 2. Nettoyer les animations
+      // Nettoyer les animations
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = undefined;
       }
 
-      // 3. Nettoyer les événements
+      //  Nettoyer les événements
       if (handleResizeRef.current) {
         window.removeEventListener('resize', handleResizeRef.current);
         handleResizeRef.current = null;
@@ -485,7 +486,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         handleClickRef.current = null;
       }
 
-      // 4. Nettoyer Three.js
+      //Nettoyer Three.js
       if (sceneRef.current) {
         sceneRef.current.traverse((object) => {
           if (object instanceof THREE.Mesh) {
@@ -500,7 +501,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         sceneRef.current = null;
       }
 
-      // 5. Nettoyer le renderer
+      // Nettoyer le renderer
       if (rendererRef.current) {
         if (mountRef.current?.contains(rendererRef.current.domElement)) {
           mountRef.current.removeChild(rendererRef.current.domElement);
@@ -509,12 +510,12 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         rendererRef.current = null;
       }
 
-      // 6. Réinitialiser les autres refs
+      // Réinitialiser les autres refs
       cameraRef.current = null;
       controlsRef.current = null;
       collisionObjectsRef.current = [];
 
-      // 7. Marquer comme complètement disposé
+      // Marquer comme complètement disposé
       isDisposedRef.current = true;
       isInitializedRef.current = false;
     };
@@ -738,36 +739,13 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
             cabinet.add(shelf);
           });
 
-          // Produits chimiques sur les étagères
-          const createChemicals = () => {
-            const bottleGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.3, 8);
-            const positions = [];
-            for (let i = -1; i < 1; i += 0.4) {
-              for (let j = 0.5; j <= 1.5; j += 1) {
-                positions.push([i, j - 1.2, 0]);
-              }
-            }
-
-            positions.forEach(pos => {
-              const bottle = new THREE.Mesh(
-                bottleGeometry,
-                new THREE.MeshStandardMaterial({
-                  color: Math.random() > 0.5 ? 0x666666 : 0x333333,
-                  roughness: 0.4
-                })
-              );
-              bottle.position.set(pos[0], pos[1] + 0.15, 0.2);
-              cabinet.add(bottle);
-            });
-          };
-
-          createChemicals();
+        
           cabinet.position.set(pos.x, 1.25, pos.z);
           scene.add(cabinet);
         });
       };
 
-      // Évier de laboratoire
+      // bureau ordinateur
       const createSink = () => {
         const sink = new THREE.Group();
 
@@ -781,33 +759,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         );
         sink.add(base);
 
-        // Cuve
-        const basin = new THREE.Mesh(
-          new THREE.BoxGeometry(1.2, 0.3, 0.6),
-          new THREE.MeshStandardMaterial({
-            color: 0xcccccc,
-            roughness: 0.4,
-            metalness: 0.6
-          })
-        );
-        basin.position.set(0, 0.3, 0);
-        sink.add(basin);
-
-        // Robinet
-        const faucet = new THREE.Group();
-        
-        const spout = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.03, 0.03, 0.4, 8),
-          new THREE.MeshStandardMaterial({
-            color: 0x888888,
-            metalness: 0.8,
-            roughness: 0.2
-          })
-        );
-        spout.rotation.x = Math.PI / 2;
-        spout.position.set(0, 0.5, 0.2);
-        faucet.add(spout);
-
+      
         const tap = new THREE.Mesh(
           new THREE.CylinderGeometry(0.05, 0.05, 0.3, 8),
           new THREE.MeshStandardMaterial({
@@ -817,9 +769,9 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
           })
         );
         tap.position.set(0, 0.35, 0);
-        faucet.add(tap);
+        
 
-        sink.add(faucet);
+    
         sink.position.set(9, 0.45, -8);
         scene.add(sink);
       };
@@ -1066,74 +1018,9 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         );
         table.add(background);
 
-        // Cadre du tableau
-        const frame = new THREE.Mesh(
-          new THREE.BoxGeometry(2.6, 1.9, 0.05),
-          new THREE.MeshStandardMaterial({ 
-            color: 0x4a3520,
-            roughness: 0.8
-          })
-        );
-        frame.position.z = -0.01;
-        table.add(frame);
+       
 
-        // Création des groupes d'éléments
-        const elementGroups = [
-          { startRow: 0, cols: [0], color: 0xff9999 }, // Groupe 1 (H)
-          { startRow: 0, cols: [17], color: 0x99ff99 }, // Groupe 18 (He)
-          { startRow: 1, cols: [0, 1, 12, 13, 14, 15, 16, 17], color: 0x9999ff }, // Période 2
-          { startRow: 2, cols: [0, 1, 12, 13, 14, 15, 16, 17], color: 0xffff99 }, // Période 3
-          { startRow: 3, cols: Array.from({length: 18}, (_, i) => i), color: 0xff99ff }, // Période 4
-          { startRow: 4, cols: Array.from({length: 18}, (_, i) => i), color: 0x99ffff }, // Période 5
-        ];
-
-        const elementSize = 0.12;
-        const spacing = 0.02;
-        const startX = -1.2;
-        const startY = 0.8;
-
-        elementGroups.forEach((group, groupIndex) => {
-          group.cols.forEach((col) => {
-            const element = new THREE.Mesh(
-              new THREE.PlaneGeometry(elementSize, elementSize),
-              new THREE.MeshStandardMaterial({
-                color: group.color,
-                roughness: 0.7,
-                transparent: true,
-                opacity: 0.9
-              })
-            );
-            
-            element.position.set(
-              startX + col * (elementSize + spacing),
-              startY - group.startRow * (elementSize + spacing),
-              0.001
-            );
-            
-            // Ajouter un contour pour chaque élément
-            const border = new THREE.Mesh(
-              new THREE.PlaneGeometry(elementSize + 0.01, elementSize + 0.01),
-              new THREE.MeshStandardMaterial({
-                color: 0xffffff,
-                roughness: 0.7
-              })
-            );
-            border.position.z = -0.001;
-            element.add(border);
-            
-            table.add(element);
-          });
-        });
-
-        // Titre du tableau
-        const titleGeometry = new THREE.PlaneGeometry(1.5, 0.2);
-        const titleMaterial = new THREE.MeshStandardMaterial({
-          color: 0xffffff,
-          roughness: 0.7
-        });
-        const title = new THREE.Mesh(titleGeometry, titleMaterial);
-        title.position.set(0, 0.9, 0.001);
-        table.add(title);
+       
 
         // Position sur le mur du fond
         table.position.set(0, 2.2, 9.7);
@@ -1155,31 +1042,181 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       const createLabComputer = () => {
         const computer = new THREE.Group();
 
-        // Écran
+        // === MONITEUR ===
+        const monitor = new THREE.Group();
+
+        // Cadre de l'écran (plastique noir)
+        const screenFrame = new THREE.Mesh(
+          new THREE.BoxGeometry(0.55, 0.45, 0.08),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x1a1a1a,
+            roughness: 0.8,
+            metalness: 0.1
+          })
+        );
+        monitor.add(screenFrame);
+
+        // Écran LCD (légèrement enfoncé)
         const screen = new THREE.Mesh(
-          new THREE.BoxGeometry(0.5, 0.4, 0.05),
-          new THREE.MeshStandardMaterial({ color: 0x333333 })
+          new THREE.BoxGeometry(0.45, 0.35, 0.02),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x0a0a0a,
+            roughness: 0.1,
+            metalness: 0.2,
+            emissive: new THREE.Color(0x001122),
+            emissiveIntensity: 0.3
+          })
         );
-        computer.add(screen);
+        screen.position.z = 0.03;
+        monitor.add(screen);
 
-        // Support
-        const stand = new THREE.Mesh(
-          new THREE.BoxGeometry(0.1, 0.3, 0.1),
-          new THREE.MeshStandardMaterial({ color: 0x222222 })
+     
+
+        // LED d'alimentation
+        const powerLED = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.008, 0.008, 0.015, 8),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x00ff00,
+            emissive: new THREE.Color(0x00ff00),
+            emissiveIntensity: 0.5,
+            transparent: true,
+            opacity: 0.8
+          })
         );
-        stand.position.y = -0.2;
-        computer.add(stand);
+        powerLED.position.set(0.15, -0.18, 0.041);
+        powerLED.rotation.x = Math.PI / 2;
+        monitor.add(powerLED);
 
-        // Base
-        const base = new THREE.Mesh(
-          new THREE.BoxGeometry(0.2, 0.02, 0.2),
-          new THREE.MeshStandardMaterial({ color: 0x222222 })
+       
+        computer.add(monitor);
+
+        // === CLAVIER ===
+        const keyboard = new THREE.Group();
+
+        // Corps du clavier
+        const keyboardBody = new THREE.Mesh(
+          new THREE.BoxGeometry(0.45, 0.03, 0.15),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x2a2a2a,
+            roughness: 0.7
+          })
         );
-        base.position.y = -0.35;
-        computer.add(base);
+        keyboard.add(keyboardBody);
 
+        // Touches individuelles
+        const keySize = 0.025;
+        const keySpacing = 0.03;
+        const startX = -0.18;
+        const startZ = -0.05;
+
+        // Rangées de touches
+        const keyRows = [
+          { keys: 13, offsetX: 0 }, // Rangée supérieure
+          { keys: 12, offsetX: 0.015 }, // Rangée QWERTY
+          { keys: 11, offsetX: 0.03 }, // Rangée ASDF
+          { keys: 8, offsetX: 0.06 }  // Rangée inférieure
+        ];
+
+        keyRows.forEach((row, rowIndex) => {
+          for (let i = 0; i < row.keys; i++) {
+            const key = new THREE.Mesh(
+              new THREE.BoxGeometry(keySize, 0.008, keySize),
+              new THREE.MeshStandardMaterial({ 
+                color: 0x444444,
+                roughness: 0.8
+              })
+            );
+            key.position.set(
+              startX + row.offsetX + i * keySpacing,
+              0.02,
+              startZ + rowIndex * keySpacing
+            );
+            keyboard.add(key);
+          }
+        });
+
+        // Barre d'espace
+        const spacebar = new THREE.Mesh(
+          new THREE.BoxGeometry(0.15, 0.008, keySize),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x444444,
+            roughness: 0.8
+          })
+        );
+        spacebar.position.set(0, 0.02, startZ + 4 * keySpacing);
+        keyboard.add(spacebar);
+
+        keyboard.position.set(0, -0.25, 0.1);
+        computer.add(keyboard);
+
+        // === SOURIS ===
+        const mouse = new THREE.Group();
+
+        // Corps de la souris
+        const mouseBody = new THREE.Mesh(
+          new THREE.CapsuleGeometry(0.03, 0.08, 4, 8),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x2a2a2a,
+            roughness: 0.6
+          })
+        );
+        mouseBody.rotation.x = Math.PI / 2;
+        mouse.add(mouseBody);
+
+        // Boutons de la souris
+        const leftButton = new THREE.Mesh(
+          new THREE.BoxGeometry(0.025, 0.04, 0.008),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x333333,
+            roughness: 0.7
+          })
+        );
+        leftButton.position.set(-0.015, 0.025, -0.02);
+        mouse.add(leftButton);
+
+        const rightButton = new THREE.Mesh(
+          new THREE.BoxGeometry(0.025, 0.04, 0.008),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x333333,
+            roughness: 0.7
+          })
+        );
+        rightButton.position.set(0.015, 0.025, -0.02);
+        mouse.add(rightButton);
+
+        // Molette
+        const scrollWheel = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.008, 0.008, 0.02, 8),
+          new THREE.MeshStandardMaterial({ 
+            color: 0x666666,
+            roughness: 0.8
+          })
+        );
+        scrollWheel.position.set(0, 0.035, -0.01);
+        scrollWheel.rotation.z = Math.PI / 2;
+        mouse.add(scrollWheel);
+
+        // LED optique (bas de la souris)
+        const opticalLED = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.005, 0.005, 0.005, 8),
+          new THREE.MeshStandardMaterial({ 
+            color: 0xff0000,
+            emissive: new THREE.Color(0xff0000),
+            emissiveIntensity: 0.3
+          })
+        );
+        opticalLED.position.set(0, -0.015, 0.02);
+        opticalLED.rotation.x = Math.PI / 2;
+        mouse.add(opticalLED);
+
+        mouse.position.set(0.25, -0.25, 0.08);
+        computer.add(mouse);
+
+      
+
+        // Positionnement et configuration finale
         computer.position.set(9.3, 1.2, -8);
-        computer.rotation.y = -Math.PI / 2;
+        computer.rotation.y = Math.PI;
         makeInteractive(computer, 'lab-computer', 'security');
         scene.add(computer);
       };
@@ -1609,7 +1646,8 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         onInteract('computer-message', 'notification', 'display', 'ATTENTION: Trop de tentatives incorrectes. Indice: Regardez l\'énigme du tableau périodique.');
         labStateRef.current.computerAttempts = 0;
       } else {
-        onInteract('computer-message', 'notification', 'display', 'Code incorrect. Essayez encore.');
+        setCodeErrorMessage('Code incorrect');
+        setTimeout(() => setCodeErrorMessage(''), 3000);
       }
     }
     setShowCodeInput(false);
@@ -1631,6 +1669,25 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
           onSubmit={handleCodeSubmit}
           onClose={() => setShowCodeInput(false)}
         />
+      )}
+      {codeErrorMessage && (
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'rgba(220, 53, 69, 0.9)',
+          color: 'white',
+          padding: '15px 30px',
+          borderRadius: '8px',
+          fontSize: '18px',
+          fontWeight: 'bold',
+          zIndex: 1003,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          border: '2px solid #dc3545'
+        }}>
+          {codeErrorMessage}
+        </div>
       )}
     </>
   );

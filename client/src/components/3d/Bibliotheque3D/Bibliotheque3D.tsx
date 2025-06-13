@@ -78,13 +78,13 @@ const bookColors = [
 interface Bibliotheque3DProps {
   onInteract: (objectId: string, objectType: string, action?: string) => void;
   onDoorInteract?: (isCodeValid: boolean) => void;
+  isCodeValid?: boolean;
 }
 
-export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDoorInteract }) => {
+export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDoorInteract, isCodeValid = false }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<PointerLockControls | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const isCodeValidRef = useRef<boolean>(false);
   const moveStateRef = useRef({
     forward: false,
     backward: false,
@@ -395,7 +395,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
         if (object?.userData.interactive) {
           switch (object.userData.id) {
             case 'laboratory-door':
-              if (isCodeValidRef.current) {
+              if (isCodeValid) {
                 onInteract(object.userData.id, object.userData.type, 'enter_laboratory');
               } else {
                 onInteract(object.userData.id, object.userData.type, 'examine');
@@ -423,9 +423,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
               onInteract(object.userData.id, object.userData.type, 'prompt_code');
               break;
             case 'painting':
-              onInteract(object.userData.id, object.userData.type, 'examine');
-              // Si le code est correct dans le tableau, on met à jour isCodeValidRef
-              isCodeValidRef.current = true; // À remplacer par votre logique de validation du code
+              onInteract(object.userData.id, object.userData.type, 'prompt_painting_code');
               break;
           }
           break;
@@ -451,7 +449,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
         scene.add(floorGroup);
       };
 
-      // Création des murs optimisés
+      // Création des murs 
       const createWalls = () => {
         const wallGeometry = sharedGeometries.wall;
         const wallMaterial = sharedMaterials.wallMaterial;
@@ -473,7 +471,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
         });
       };
 
-      // Création de la bibliothèque murale optimisée
+      // Création de la bibliothèque murale 
       const createWallBookshelf = () => {
         const createSingleBookshelf = (xOffset: number) => {
           const bookshelf = new THREE.Group();
@@ -485,7 +483,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
           );
           bookshelf.add(mainStructure);
 
-          // Création des livres optimisée
+          // Création des livres 
           const createBooks = (sectionStart: number, sectionEnd: number, row: number) => {
             const books = new THREE.Group();
               let xPos = sectionStart + 0.2;
@@ -496,8 +494,8 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
                 const bookColor = bookColors[Math.floor(Math.random() * bookColors.length)];
               const bookMaterial = new THREE.MeshStandardMaterial({
                     color: bookColor,
-                    roughness: 0.9, // Plus rugueux pour un aspect cuir/papier
-                    metalness: 0.0, // Pas métallique du tout
+                    roughness: 0.9, 
+                    metalness: 0.0, 
                     emissive: 0x000000,
                     emissiveIntensity: 0
               });
@@ -562,7 +560,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
         });
       };
 
-      // Création du mobilier optimisé
+      // Création du mobilier 
       const createFurniture = () => {
         // Bureau avec tiroirs
           const desk = new THREE.Group();
@@ -694,7 +692,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
           scene.add(chair);
         };
 
-      // Création des éléments interactifs optimisés
+      // Création des éléments interactifs 
       const createInteractiveObjects = () => {
         // Vérifier si le livre mystérieux existe déjà dans la scène
         const existingBook = scene.getObjectByName('mysterious-book-object');
@@ -754,9 +752,9 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
         }
       };
 
-      // Création des éléments décoratifs optimisés
+      // Création des éléments décoratifs   
       const createDecorations = () => {
-        // Tapis oriental optimisé
+        // Tapis oriental 
         const createOrientalRug = () => {
           const rugGroup = new THREE.Group();
 
@@ -775,7 +773,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
           carpetBase.position.y = 0.05;
           rugGroup.add(carpetBase);
 
-          // Motifs géométriques optimisés
+          // Motifs géométriques 
           const patternGeometry = new THREE.CircleGeometry(0.2, 8);
           const patternMaterial = new THREE.MeshStandardMaterial({
             color: 0x2B1810,
@@ -802,7 +800,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
           scene.add(rugGroup);
         };
 
-        // Chandelier optimisé
+        // Chandelier 
         const createChandelier = () => {
           const chandelier = new THREE.Group();
 
@@ -813,7 +811,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
           );
           chandelier.add(mainStructure);
 
-          // Bougies optimisées
+          // Bougies  
           const candleGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.2, 8);
           const candleMaterial = new THREE.MeshStandardMaterial({
             color: 0xFFFDD0,
@@ -832,7 +830,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
             );
             chandelier.add(candle);
 
-            // Lumière optimisée
+            // Lumière 
             const candleLight = new THREE.PointLight(0xFFA500, 0.3, 3);
             candleLight.position.set(
               Math.cos(angle) * radius,
@@ -846,7 +844,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
           scene.add(chandelier);
         };
 
-        // Globe terrestre optimisé
+        // Globe terrestre 
         const createGlobe = () => {
           const globe = new THREE.Group();
           
@@ -873,7 +871,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
           scene.add(globe);
         };
 
-        // Tableaux optimisés
+        // Tableaux 
         const createPaintings = () => {
           // Réutilisation des géométries et matériaux
           const frameGeometry = new THREE.BoxGeometry(1.7, 2.2, 0.05);
@@ -918,7 +916,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
           createPainting(9.7, -2, false);   // Tableau non-interactif sur le mur droit
         };
 
-        // Porte optimisée
+        // Porte 
       const createDoor = () => {
         const doorGroup = new THREE.Group();
 
@@ -953,7 +951,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
         scene.add(doorGroup);
       };
 
-        // Coin salon optimisé et détaillé
+        // Coin salon   
       const createLounge = () => {
           // Création d'un fauteuil club détaillé
         const createArmchair = (x: number, z: number, rotation: number) => {
@@ -1379,7 +1377,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
 
       collisionObjectsRef.current = [];
     };
-  }, [scene, camera]);
+  }, [scene, camera, isCodeValid]);
 
   return (
     <>
