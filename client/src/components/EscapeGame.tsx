@@ -833,25 +833,25 @@ Et le deuxième est plus petit que le quatrième.`,
   };
 
   const handleInventoryItemClick = useCallback((item: InventoryItem) => {
-    if (item.id === 'shadow-riddle') {
+    if (item.id === 'riddle-shadow') {
       setShowRiddleSecret1(true);
       setSelectedRiddle(item.id);
-    } else if (item.id === 'mirror-riddle') {
+    } else if (item.id === 'riddle-mirror') {
       setShowRiddleSecret2(true);
       setSelectedRiddle(item.id);
-    } else if (item.id === 'book-riddle') {
+    } else if (item.id === 'riddle-wisdom') {
       setShowRiddleSecret3(true);
       setSelectedRiddle(item.id);
-    } else if (item.id === 'sun-riddle') {
+    } else if (item.id === 'riddle-light') {
       setShowRiddleSecret4(true);
       setSelectedRiddle(item.id);
-    } else if (item.id === 'periodic-table-elements-riddle') {
+    } else if (item.id === 'riddle-elements') {
       setShowRiddle(true);
       setCurrentRiddle(item);
       setSelectedRiddle(item.id);
     } else if (item.id === 'professors-journal') {
       setShowBook(true);
-    } else if (item.id === 'drawer-riddle') {
+    } else if (item.id === 'riddle-mathematics') {
       setShowRiddle(true);
       setCurrentRiddle(item);
       setSelectedRiddle(item.id);
@@ -1071,11 +1071,11 @@ Et le deuxième est plus petit que le quatrième.`,
             </>
           )}
 
-          {showRiddleSecret1 && selectedRiddle === 'shadow-riddle' && (
+          {showRiddleSecret1 && selectedRiddle === 'riddle-shadow' && (
             <RiddleSecret1 onClose={() => setShowRiddleSecret1(false)} />
           )}
 
-          {showRiddleSecret2 && selectedRiddle === 'mirror-riddle' && (
+          {showRiddleSecret2 && selectedRiddle === 'riddle-mirror' && (
             <RiddleSecret2 onClose={() => setShowRiddleSecret2(false)} />
           )}
 
