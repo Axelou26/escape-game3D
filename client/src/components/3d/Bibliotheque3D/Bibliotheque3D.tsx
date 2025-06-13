@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
 import { TextureLoader } from 'three';
+import { handlePointerLockErrors } from '../../../utils/errorHandler';
 
 // Géométries réutilisables
 const sharedGeometries = {
@@ -54,24 +55,24 @@ const sharedMaterials = {
   })
 };
 
-// Ajout des couleurs de livres au début du fichier, après les matériaux partagés
+// Couleurs de livres plus réalistes et atténuées
 const bookColors = [
-  0x8B4513, // Marron classique
-  0x654321, // Brun rougeâtre
-  0x8B0000, // Rouge foncé
-  0x006400, // Vert foncé
-  0x191970, // Bleu minuit
-  0x4B0082, // Indigo
-  0x800000, // Bordeaux
-  0x556B2F, // Vert olive foncé
-  0x2F4F4F, // Gris ardoise foncé
-  0x8B008B, // Magenta foncé
-  0x800080, // Pourpre
-  0x4A0404, // Rouge vin
-  0x004225, // Vert forêt
-  0x000080, // Bleu marine
-  0x4A3C32, // Taupe
-  0x704214  // Brun sépia
+  0x3A2818, // Marron foncé atténué
+  0x2D1B10, // Brun très foncé
+  0x4A1515, // Rouge bordeaux foncé
+  0x1A2A1A, // Vert très foncé
+  0x1A1A2A, // Bleu très foncé
+  0x2A1A2A, // Violet foncé
+  0x3A1515, // Rouge vin foncé
+  0x2A2A1A, // Olive très foncé
+  0x1A1A1A, // Gris très foncé
+  0x2A152A, // Magenta très foncé
+  0x251520, // Pourpre foncé
+  0x2A1010, // Rouge très sombre
+  0x102010, // Vert forêt sombre
+  0x101025, // Bleu marine sombre
+  0x252015, // Taupe foncé
+  0x3A2510  // Sépia foncé
 ];
 
 interface Bibliotheque3DProps {
@@ -170,10 +171,11 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
 
     // Configuration des contrôles
     const controls = new PointerLockControls(camera, document.body);
+    handlePointerLockErrors(controls);
     controlsRef.current = controls;
 
-    // Éclairage optimisé
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    // Éclairage optimisé - réduit pour un effet plus sombre et réaliste
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
     scene.add(ambientLight);
 
     // Lumières principales optimisées
@@ -396,12 +398,26 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
               if (isCodeValidRef.current) {
                 onInteract(object.userData.id, object.userData.type, 'enter_laboratory');
               } else {
-                onDoorInteract?.(false);
+                onInteract(object.userData.id, object.userData.type, 'examine');
               }
               break;
             case 'mysterious-book':
               onInteract(object.userData.id, object.userData.type, 'add_to_inventory');
-              object.visible = false;
+              // Retirer complètement l'objet de la scène pour éviter les interactions multiples
+              if (object.parent) {
+                object.parent.remove(object);
+              }
+              // Nettoyer les ressources de l'objet retiré
+              object.traverse((child) => {
+                if (child instanceof THREE.Mesh) {
+                  child.geometry.dispose();
+                  if (child.material instanceof THREE.Material) {
+                    child.material.dispose();
+                  } else if (Array.isArray(child.material)) {
+                    child.material.forEach(material => material.dispose());
+                  }
+                }
+              });
               break;
             case 'locked-drawer':
               onInteract(object.userData.id, object.userData.type, 'prompt_code');
@@ -480,8 +496,8 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
                 const bookColor = bookColors[Math.floor(Math.random() * bookColors.length)];
               const bookMaterial = new THREE.MeshStandardMaterial({
                     color: bookColor,
-                    roughness: 0.7,
-                    metalness: 0.2,
+                    roughness: 0.9, // Plus rugueux pour un aspect cuir/papier
+                    metalness: 0.0, // Pas métallique du tout
                     emissive: 0x000000,
                     emissiveIntensity: 0
               });
@@ -680,8 +696,15 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
 
       // Création des éléments interactifs optimisés
       const createInteractiveObjects = () => {
+        // Vérifier si le livre mystérieux existe déjà dans la scène
+        const existingBook = scene.getObjectByName('mysterious-book-object');
+        if (existingBook) {
+          return;
+        }
+
         // Livre mystérieux intégré dans la bibliothèque
         const mysteriousBook = new THREE.Group();
+        mysteriousBook.name = 'mysterious-book-object'; // Nom unique pour identification
         const mysteriousBookBody = new THREE.Mesh(
           sharedGeometries.book,
           new THREE.MeshStandardMaterial({
@@ -714,16 +737,21 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, onDo
         makeInteractive(mysteriousBook, 'mysterious-book', 'book');
         scene.add(mysteriousBook);
 
-        // Tiroir verrouillé
-        const drawer = new THREE.Group();
-        const drawerBody = new THREE.Mesh(
-          sharedGeometries.drawer,
-          sharedMaterials.darkWood
-        );
-        drawer.add(drawerBody);
-        drawer.position.set(0.9, 0.4, -2.425);
-        makeInteractive(drawer, 'locked-drawer', 'drawer');
-        scene.add(drawer);
+        // Vérifier si le tiroir verrouillé existe déjà dans la scène
+        const existingDrawer = scene.getObjectByName('locked-drawer-object');
+        if (!existingDrawer) {
+          // Tiroir verrouillé
+          const drawer = new THREE.Group();
+          drawer.name = 'locked-drawer-object'; // Nom unique pour identification
+          const drawerBody = new THREE.Mesh(
+            sharedGeometries.drawer,
+            sharedMaterials.darkWood
+          );
+          drawer.add(drawerBody);
+          drawer.position.set(0.9, 0.4, -2.425);
+          makeInteractive(drawer, 'locked-drawer', 'drawer');
+          scene.add(drawer);
+        }
       };
 
       // Création des éléments décoratifs optimisés

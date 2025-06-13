@@ -36,26 +36,15 @@ export const BibliothequeScene: React.FC<BibliothequeSceneProps> = ({
         let description = '';
         switch (objectId) {
           case 'painting':
-            description = 'Un tableau mystérieux représentant quatre éléments... Il semble y avoir un mécanisme caché.';
             if (onInteract) {
               onInteract('painting', 'interactive', 'prompt_painting_code');
             }
-            break;
+            return; 
           case 'laboratory-door':
-            if (hasLaboratoryKey) {
-              description = 'La porte du laboratoire... Vous pouvez l\'ouvrir avec la clé.';
-              if (onInteract) {
-                onInteract('laboratory-door', 'door', 'enter_laboratory');
-              }
-            } else {
-              description = 'Une porte verrouillée menant au laboratoire secret. Il vous faut une clé pour l\'ouvrir.';
-            }
+            description = 'Une porte verrouillée menant au laboratoire secret. Vous devez avoir la clés pour l\'ouvrir.';
             break;
         }
         setExaminedObject({ id: objectId, type: objectType, description });
-        if (showMessage) {
-          showMessage(description);
-        }
         break;
     }
   };

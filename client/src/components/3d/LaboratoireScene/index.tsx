@@ -5,6 +5,7 @@ import { GameState } from '../../../types/gameState';
 import './LaboratoireScene.css';
 import { grey } from '@mui/material/colors';
 import { CodeInput } from '../../ui/CodeInput/CodeInput';
+import { handlePointerLockErrors } from '../../../utils/errorHandler';
 
 interface LaboratoireSceneProps {
   onInteract: (objectId: string, objectType: string, action?: string, data?: any) => void;
@@ -285,15 +286,10 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         object = object.parent;
       }
       if (object?.userData.interactive) {
-
         
         switch (object.userData.id) {
           case 'microscope':
-            const microcode = {
-              indice: "Les couleurs contiennent la clé. À associer dans l'ordre du spectre visible inversé.",
-              couleurs: ['violet', 'bleu', 'vert', 'jaune', 'orange', 'rouge']
-            };
-            onInteract(object.userData.id, 'equipment', 'examine', microcode);
+            onInteract('microscope-message', 'message', 'examine', 'Les couleurs contiennent la clé. À associer dans l\'ordre du spectre visible inversé.');
             break;
           case 'beaker-rouge':
           case 'beaker-orange':
@@ -306,9 +302,9 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
           case 'periodic-table':
             if (object.userData.type === 'state' && object.userData.action === 'unlock') {
               periodicTableStateRef.current = {
-                ...periodicTableStateRef.current,
                 isLocked: false,
-                globalUnlocked: true
+                globalUnlocked: true,
+                riddleCollected: false
               };
               object.userData.isLocked = false;
               object.userData.globalUnlocked = true;
@@ -317,35 +313,40 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
               break;
             }
             
-            if (!periodicTableStateRef.current.globalUnlocked) {
-              onInteract(object.userData.id, 'message', 'examine', 'Le tableau périodique semble verrouillé. Peut-être que la séquence des béchers pourrait le déverrouiller...');
-            } else if (!periodicTableStateRef.current.riddleCollected) {
-              const periodicTableRiddle = {
-                id: 'periodic-table-elements-riddle',
-                type: 'riddle',
-                name: 'Énigme des éléments chimiques',
-                description: 'Une énigme mystérieuse apparue sur le tableau...',
-                content: {
-                  riddle: "Mon premier : Je suis dans l'air sans y être. Je suis vital mais invisible. Mon symbole est un souffle, et sans moi, plus de feu.\n\n" +
-                          "Mon second : Je suis liquide et pourtant j'éteins le feu. Je tombe du ciel mais je peux inonder ton labo. On me voit mais je n'ai pas de couleur.\n\n" +
-                          "Pour finir : Je suis solide, je brille, je conduis l'électricité. Je suis souvent utilisé pour créer des alliages. Mon symbole commence par la 14e lettre de l'alphabet.",
-                  answer: 'OHN'
-                }
-              };
-              
-              // Ajouter l'énigme à l'inventaire avec la bonne action
-              onInteract(object.userData.id, 'riddle', 'add_to_inventory', periodicTableRiddle);
-              
-              // Message de confirmation
-              onInteract('periodic-table-message', 'message', 'examine', 'Une énigme mystérieuse est apparue sur le tableau périodique ! Elle a été ajoutée à votre inventaire.');
-              
-              // Marquer l'énigme comme récupérée
-              periodicTableStateRef.current = {
-                ...periodicTableStateRef.current,
-                riddleCollected: true
-              };
+            // Vérifier d'abord si le tableau est déverrouillé
+            if (!periodicTableStateRef.current.globalUnlocked && !periodicTableUnlocked) {
+              onInteract('periodic-table-locked', 'message', 'examine', 'Ce tableau semble verrouillé, il y a peut-être quelque chose à faire avec les béchers.');
             } else {
-              onInteract(object.userData.id, 'message', 'examine', 'Vous avez déjà récupéré l\'énigme du tableau périodique.');
+              // Le tableau est déverrouillé - vérifier si l'énigme a été collectée
+              if (!periodicTableStateRef.current.riddleCollected) {
+                const periodicTableRiddle = {
+                  id: 'periodic-table-elements-riddle',
+                  type: 'riddle',
+                  name: 'Énigme des éléments chimiques',
+                  description: 'Une énigme mystérieuse apparue sur le tableau...',
+                  content: {
+                    riddle: "Mon premier : Je suis dans l'air sans y être. Je suis vital mais invisible. Mon symbole est un souffle, et sans moi, plus de feu.\n\n" +
+                            "Mon second : Je suis liquide et pourtant j'éteins le feu. Je tombe du ciel mais je peux inonder ton labo. On me voit mais je n'ai pas de couleur.\n\n" +
+                            "Pour finir : Je suis solide, je brille, je conduis l'électricité. Je suis souvent utilisé pour créer des alliages. Mon symbole commence par la 14e lettre de l'alphabet.",
+                    answer: 'OHN'
+                  }
+                };
+                
+                // Ajouter l'énigme à l'inventaire avec la bonne action
+                onInteract(object.userData.id, 'riddle', 'add_to_inventory', periodicTableRiddle);
+                
+                // Message de confirmation
+                onInteract('periodic-table-message', 'message', 'examine', 'Une énigme mystérieuse est apparue sur le tableau périodique ! Elle a été ajoutée à votre inventaire.');
+                
+                // Marquer l'énigme comme récupérée
+                periodicTableStateRef.current = {
+                  isLocked: false,
+                  globalUnlocked: true,
+                  riddleCollected: true
+                };
+              } else {
+                onInteract(object.userData.id, 'message', 'examine', 'Vous avez déjà récupéré l\'énigme du tableau périodique.');
+              }
             }
             break;
           case 'lab-computer':
@@ -430,7 +431,6 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
   // Initialisation du renderer
   const initRenderer = useCallback(() => {
     if (!mountRef.current || !document.body.contains(mountRef.current) || !isMountedRef.current) {
-      console.error("Le div de montage n'est pas disponible ou pas attaché au DOM pour l'initialisation du renderer.");
       return null;
     }
 
@@ -449,7 +449,6 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       mountRef.current.appendChild(renderer.domElement);
       return renderer;
     } catch (error) {
-      console.error("Erreur explicite lors de la création de WebGLRenderer:", error);
       return null;
     }
   }, []);
@@ -458,12 +457,8 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
   useEffect(() => {
     isMountedRef.current = true;
     isDisposedRef.current = false;
-    console.log("Composant monté");
 
     return () => {
-      console.log("Début du démontage du composant");
-      
-      // 1. Marquer le composant comme en cours de démontage
       isMountedRef.current = false;
       
       // 2. Nettoyer les animations
@@ -522,52 +517,34 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       // 7. Marquer comme complètement disposé
       isDisposedRef.current = true;
       isInitializedRef.current = false;
-
-      console.log("Composant complètement démonté");
     };
   }, []);
 
   // Effet principal pour l'initialisation de la scène
   useEffect(() => {
     if (!mountRef.current || !isMountedRef.current || isDisposedRef.current) {
-      console.log("Initialisation de la scène impossible : composant non monté ou déjà disposé");
       return;
     }
 
     if (isInitializedRef.current) {
-      console.log("La scène est déjà initialisée");
       return;
     }
 
-    console.log("Début de l'initialisation de la scène");
-    const timeoutId = setTimeout(() => {
-      if (!isMountedRef.current) {
-        console.log("Annulation de l'initialisation : composant démonté");
-        return;
-      }
-      initScene();
-    }, 100);
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
+    initScene();
   }, [initRenderer, onInteract, onUpdateGameState, handleInteraction, checkCollision]);
 
   // Initialisation du laboratoire
   const initScene = useCallback(() => {
     if (!mountRef.current || !isMountedRef.current || isDisposedRef.current) {
-      console.error("Le composant n'est pas monté correctement ou a été disposé");
       return;
     }
 
     if (isInitializedRef.current) {
-      console.log("La scène est déjà initialisée, ignoré.");
       return;
     }
 
     isInitializedRef.current = true;
     isDisposedRef.current = false;
-    console.log("Première initialisation de la scène...");
 
     // Initialisation de la scène
     const scene = new THREE.Scene();
@@ -587,16 +564,14 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     // Configuration des contrôles
     if (!controlsRef.current) {
       const controls = new PointerLockControls(camera, document.body);
+      handlePointerLockErrors(controls);
       controlsRef.current = controls;
     }
 
     // Création du laboratoire
     const createLaboratory = () => {
-      console.log("Initialisation du laboratoire...");
-
       // Sol en carrelage
       const createTiledFloor = () => {
-        console.log("Création du sol...");
         const floorGroup = new THREE.Group();
         const tileSize = 1;
         const roomSize = 20;
@@ -666,7 +641,6 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
 
       // Tables de laboratoire
       const createLabTables = () => {
-        console.log("Création des tables et équipements...");
         const tablePositions = [
           { x: -5, z: 0 },
           { x: 0, z: 0 },
@@ -674,7 +648,6 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         ];
 
         tablePositions.forEach((pos, index) => {
-          console.log(`Création de la table ${index + 1}...`);
           // Structure de la table
           const table = new THREE.Group();
 
@@ -711,7 +684,6 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
 
           // Équipement de laboratoire sur la table
           const createLabEquipment = () => {
-            console.log(`Ajout des équipements sur la table ${index + 1}...`);
             table.position.set(pos.x, 0, pos.z);
             scene.add(table);
           };
@@ -858,8 +830,6 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       createLabTables();
       createLabCabinets();
       createSink();
-
-      console.log("Laboratoire initialisé avec succès!");
     };
 
     // Création immédiate du laboratoire

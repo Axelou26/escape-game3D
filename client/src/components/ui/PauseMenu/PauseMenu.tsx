@@ -4,6 +4,7 @@ import './PauseMenu.css';
 interface PauseMenuProps {
   onClose: () => void;
   onRestart: () => void;
+  onReturnToIntro: () => void;
   currentRoom: string;
   unlockedRooms: string[];
   onRoomChange: (room: 'library' | 'laboratory' | 'secret-chamber') => void;
@@ -12,16 +13,11 @@ interface PauseMenuProps {
 export const PauseMenu: React.FC<PauseMenuProps> = ({
   onClose,
   onRestart,
+  onReturnToIntro,
   currentRoom,
   unlockedRooms,
   onRoomChange
 }) => {
-  const rooms = [
-    { id: 'library', name: 'Bibliothèque', icon: '📚' },
-    { id: 'laboratory', name: 'Laboratoire', icon: '🧪' },
-    { id: 'secret-chamber', name: 'Chambre Secrète', icon: '🔒' }
-  ];
-
   return (
     <div className="pause-menu-overlay">
       <div className="pause-menu">
@@ -31,28 +27,14 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
         
         <div className="pause-menu-content">
           <div className="pause-menu-section">
-            <h3>Salles Disponibles</h3>
-            <div className="room-buttons">
-              {rooms.map(room => (
-                <button
-                  key={room.id}
-                  onClick={() => onRoomChange(room.id as 'library' | 'laboratory' | 'secret-chamber')}
-                  disabled={!unlockedRooms.includes(room.id) || currentRoom === room.id}
-                  className={`room-select-button ${currentRoom === room.id ? 'active' : ''}`}
-                >
-                  <span className="room-icon">{room.icon}</span>
-                  <span className="room-name">{room.name}</span>
-                  {currentRoom === room.id && <span className="room-current">(Actuelle)</span>}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="pause-menu-section">
             <div className="pause-menu-buttons">
               <button onClick={onRestart} className="menu-button restart-button">
                 <span className="button-icon">🔄</span>
                 Recommencer
+              </button>
+              <button onClick={onReturnToIntro} className="menu-button intro-button">
+                <span className="button-icon">🏠</span>
+                Retour à l'intro
               </button>
               <button onClick={onClose} className="menu-button resume-button">
                 <span className="button-icon">▶️</span>

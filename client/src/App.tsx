@@ -5,6 +5,7 @@ import Register from './pages/Register';
 import { EscapeGame } from './components/EscapeGame';
 import { GameIntro } from './pages/GameIntro';
 import { Leaderboard } from './components/ui/Leaderboard/Leaderboard';
+import { PointerLockErrorBoundary } from './components/ErrorBoundary/PointerLockErrorBoundary';
 import './App.css';
 
 function App() {
@@ -20,51 +21,53 @@ function App() {
   }
 
   return (
-    <Router>
-      <div style={{
-        minHeight: '100vh',
-        backgroundColor: '#1a1a1a',
-        color: 'white',
-        padding: 0
-      }}>
-        <Routes>
-          <Route 
-            path="/login" 
-            element={
-              isAuthenticated ? 
-                <Navigate to="/intro" replace /> : 
-                <Login setIsAuthenticated={setIsAuthenticated} />
-            } 
-          />
-          <Route 
-            path="/register" 
-            element={
-              isAuthenticated ? 
-                <Navigate to="/intro" replace /> : 
-                <Register />
-            } 
-          />
-          <Route 
-            path="/intro" 
-            element={
-              isAuthenticated ? 
-                <GameIntro /> : 
-                <Navigate to="/login" replace />
-            } 
-          />
-          <Route 
-            path="/game" 
-            element={
-              isAuthenticated ? 
-                <EscapeGame /> : 
-                <Navigate to="/login" replace />
-            } 
-          />
-          <Route path="/leaderboard" element={<Leaderboard />} />
-          <Route path="*" element={<Navigate to={isAuthenticated ? "/intro" : "/login"} replace />} />
-        </Routes>
-      </div>
-    </Router>
+    <PointerLockErrorBoundary>
+      <Router>
+        <div style={{
+          minHeight: '100vh',
+          backgroundColor: '#1a1a1a',
+          color: 'white',
+          padding: 0
+        }}>
+          <Routes>
+            <Route 
+              path="/login" 
+              element={
+                isAuthenticated ? 
+                  <Navigate to="/intro" replace /> : 
+                  <Login setIsAuthenticated={setIsAuthenticated} />
+              } 
+            />
+            <Route 
+              path="/register" 
+              element={
+                isAuthenticated ? 
+                  <Navigate to="/intro" replace /> : 
+                  <Register />
+              } 
+            />
+            <Route 
+              path="/intro" 
+              element={
+                isAuthenticated ? 
+                  <GameIntro /> : 
+                  <Navigate to="/login" replace />
+              } 
+            />
+            <Route 
+              path="/game" 
+              element={
+                isAuthenticated ? 
+                  <EscapeGame /> : 
+                  <Navigate to="/login" replace />
+              } 
+            />
+            <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="*" element={<Navigate to={isAuthenticated ? "/intro" : "/login"} replace />} />
+          </Routes>
+        </div>
+      </Router>
+    </PointerLockErrorBoundary>
   );
 }
 

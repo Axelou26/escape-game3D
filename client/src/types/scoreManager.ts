@@ -32,11 +32,6 @@ export const calculateTimeBasedPenalty = (elapsedTimeInSeconds: number): number 
   const twoMinutesInSeconds = 120;
   const penaltyCount = Math.floor(elapsedTimeInSeconds / twoMinutesInSeconds);
   const penalty = penaltyCount * ScoreEvents.TIME_PENALTY;
-  console.log('Calcul de la pénalité de temps:', {
-    temps: elapsedTimeInSeconds,
-    nombrePénalités: penaltyCount,
-    pénalité: penalty
-  });
   return penalty;
 };
 
@@ -54,13 +49,6 @@ export const updateScore = (
   const eventPoints = ScoreEvents[event];
   const newScore = currentScore + eventPoints;
   
-  console.log('Mise à jour du score:', {
-    événement: event,
-    points: eventPoints,
-    scoreAvant: currentScore,
-    scoreAprès: newScore
-  });
-
   // Empêcher le score d'être négatif
   return Math.max(0, newScore);
 }; 

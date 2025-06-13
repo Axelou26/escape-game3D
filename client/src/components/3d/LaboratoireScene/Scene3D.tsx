@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
+import { handlePointerLockErrors } from '../../../utils/errorHandler';
 
 interface Scene3DProps {
   onInteract: (objectId: string, objectType: string, action?: string, data?: any) => void;
@@ -75,6 +76,7 @@ export const Scene3D: React.FC<Scene3DProps> = ({ onInteract, isPeriodicTableLoc
 
     // Création des contrôles
     const controls = new PointerLockControls(camera, document.body);
+    handlePointerLockErrors(controls);
     controlsRef.current = controls;
 
     // Nettoyage

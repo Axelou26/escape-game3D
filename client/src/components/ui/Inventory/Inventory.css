@@ -10,7 +10,7 @@
   backdrop-filter: blur(8px);
   box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
   transition: all 0.3s ease;
-  max-width: 300px;
+  max-width: 450px;
   z-index: 1000;
 }
 
@@ -30,12 +30,12 @@
 
 .inventory-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-  gap: 10px;
-  padding: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 12px;
+  padding: 12px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
-  min-height: 80px;
+  min-height: 120px;
 }
 
 .inventory-item {
@@ -157,7 +157,7 @@
 
 /* État étendu de l'inventaire */
 .inventory.expanded {
-  width: 300px;
+  width: 450px;
   transition: width 0.3s ease;
 }
 
@@ -192,7 +192,7 @@
   border: 1px solid #ffd700;
   border-radius: 8px;
   padding: 10px;
-  width: 200px;
+  width: 250px;
   color: white;
   font-size: 0.9em;
   z-index: 1000;

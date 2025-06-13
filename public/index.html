@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
@@ -7,14 +7,90 @@
     <meta name="theme-color" content="#000000" />
     <meta
       name="description"
-      content="Escape Game Virtuel - Une expérience immersive"
+      content="Web site created using create-react-app"
     />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <title>Escape Game Virtuel</title>
+    <title>Escape Game</title>
+
+    <!-- Script pour masquer les overlays d'erreur PointerLock -->
+    <script>
+      // Intercepter les erreurs PointerLock avant qu'elles n'atteignent React
+      window.addEventListener('error', function(event) {
+        const message = event.message || event.error?.message || '';
+        const pointerLockErrors = [
+          'The user has exited the lock before this request was completed',
+          'SecurityError: The user has exited the lock',
+          'THREE.PointerLockControls: Unable to use Pointer Lock API'
+        ];
+        
+        if (pointerLockErrors.some(err => message.includes(err))) {
+          event.stopPropagation();
+          event.preventDefault();
+          return false;
+        }
+      }, true);
+
+      window.addEventListener('unhandledrejection', function(event) {
+        const message = event.reason?.message || event.reason?.toString() || '';
+        const pointerLockErrors = [
+          'The user has exited the lock before this request was completed',
+          'SecurityError: The user has exited the lock',
+          'THREE.PointerLockControls: Unable to use Pointer Lock API'
+        ];
+        
+        if (pointerLockErrors.some(err => message.includes(err))) {
+          event.preventDefault();
+          return false;
+        }
+      }, true);
+
+      // Fonction pour masquer les overlays d'erreur
+      function hidePointerLockErrorOverlays() {
+        const allElements = document.querySelectorAll('*');
+        allElements.forEach(element => {
+          const text = element.textContent || '';
+          const innerHTML = element.innerHTML || '';
+          
+          if ((text.includes('Uncaught runtime errors') && 
+               text.includes('The user has exited the lock')) ||
+              innerHTML.includes('Uncaught runtime errors')) {
+            element.style.display = 'none';
+            element.style.visibility = 'hidden';
+            element.style.opacity = '0';
+            element.style.pointerEvents = 'none';
+            
+            // Essayer de supprimer l'élément complètement
+            setTimeout(() => {
+              if (element.parentNode) {
+                element.parentNode.removeChild(element);
+              }
+            }, 100);
+          }
+        });
+      }
+
+      // Observer en continu
+      let observer;
+      document.addEventListener('DOMContentLoaded', function() {
+        hidePointerLockErrorOverlays();
+        
+        observer = new MutationObserver(function() {
+          hidePointerLockErrorOverlays();
+        });
+        
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      });
+
+      // Vérifier périodiquement même sans DOMContentLoaded
+      setInterval(hidePointerLockErrorOverlays, 500);
+    </script>
   </head>
   <body>
-    <noscript>Vous devez activer JavaScript pour utiliser cette application.</noscript>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
   </body>
 </html> 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BibliothequeScene } from './3d/BibliothequeScene';
 import { LaboratoireScene } from './3d/LaboratoireScene';
 import { SecretChamber3D } from './3d/SecretChamber3D/SecretChamber3D';
@@ -21,6 +22,21 @@ import { ScoreEvents, ScoreEventType, updateScore } from '../types/scoreManager'
 const API_URL = 'http://localhost:3001/api';
 
 export const EscapeGame: React.FC = () => {
+  const navigate = useNavigate();
+  
+  // Fonction pour nettoyer l'inventaire des doublons
+  const cleanInventory = useCallback((inventory: InventoryItem[]): InventoryItem[] => {
+    const seen = new Set<string>();
+    return inventory.filter(item => {
+      if (seen.has(item.id)) {
+        console.warn(`Doublon détecté dans l'inventaire: ${item.id}`, item);
+        return false;
+      }
+      seen.add(item.id);
+      return true;
+    });
+  }, []);
+
   // État initial du jeu
   const initialGameState: GameState = {
     score: 1000,
@@ -35,7 +51,22 @@ export const EscapeGame: React.FC = () => {
     artifactUnlocked: false
   };
 
-  const [gameState, setGameState] = useState<GameState>(initialGameState);
+  const [gameState, setGameStateRaw] = useState<GameState>(initialGameState);
+  
+  // Wrapper pour setGameState qui nettoie automatiquement l'inventaire
+  const setGameState = useCallback((newStateOrUpdater: GameState | ((prevState: GameState) => GameState)) => {
+    setGameStateRaw(prevState => {
+      const newState = typeof newStateOrUpdater === 'function' 
+        ? newStateOrUpdater(prevState) 
+        : newStateOrUpdater;
+      
+      // Nettoyer l'inventaire des doublons
+      return {
+        ...newState,
+        inventory: cleanInventory(newState.inventory)
+      };
+    });
+  }, [cleanInventory]);
 
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [currentCodeType, setCurrentCodeType] = useState<'drawer' | 'painting'>('drawer');
@@ -79,7 +110,13 @@ export const EscapeGame: React.FC = () => {
         currentRoom: newState.currentRoom,
         inventory: Array.isArray(newState.inventory) ? newState.inventory : [],
         score: typeof newState.score === 'number' ? newState.score : 1000,
-        elapsedTime: typeof newState.elapsedTime === 'number' ? newState.elapsedTime : 0
+        elapsedTime: typeof newState.elapsedTime === 'number' ? newState.elapsedTime : 0,
+        microscopeEnigmeResolved: newState.microscopeEnigmeResolved || false,
+        periodicTableUnlocked: newState.periodicTableUnlocked || false,
+        unlockedRooms: Array.isArray(newState.unlockedRooms) ? newState.unlockedRooms : ['library'],
+        computerUnlocked: newState.computerUnlocked || false,
+        gameCompleted: newState.gameCompleted || false,
+        artifactUnlocked: newState.artifactUnlocked || false
       }
     };
 
@@ -147,12 +184,16 @@ export const EscapeGame: React.FC = () => {
   const updateGameState = useCallback((updates: Partial<GameState>) => {
     setGameState(prevState => {
       const newState = { ...prevState, ...updates };
+      // Nettoyer l'inventaire si il a été modifié
+      if (updates.inventory) {
+        newState.inventory = cleanInventory(newState.inventory);
+      }
       if (!isOfflineMode) {
         saveGameState(newState).catch(console.error);
       }
       return newState;
     });
-  }, [isOfflineMode, saveGameState]);
+  }, [isOfflineMode, saveGameState, cleanInventory]);
 
   // Mettre à jour le score en fonction des événements
   const handleScoreUpdate = useCallback((event: ScoreEventType) => {
@@ -168,7 +209,7 @@ export const EscapeGame: React.FC = () => {
   const handleInteract = useCallback((objectId: string, objectType: string, action?: string, data?: any) => {
     if (!action) return;
     
-    if (isTransitioning && !['examine', 'feedback', 'checkBeakerSequence', 'enterCode', 'add_key_to_inventory'].includes(action)) {
+    if (isTransitioning && !['examine', 'feedback', 'checkBeakerSequence', 'enterCode', 'add_key_to_inventory', 'add_to_inventory'].includes(action)) {
       return;
     }
 
@@ -223,6 +264,10 @@ export const EscapeGame: React.FC = () => {
         break;
 
       case 'examine':
+        if (data) {
+          setMessage(data);
+          setTimeout(() => setMessage(''), 3000);
+        }
         if (objectId === 'microscope' && data) {
           setTimeout(() => {
             resetTransition();
@@ -231,6 +276,20 @@ export const EscapeGame: React.FC = () => {
           setTimeout(() => {
             resetTransition();
           }, 3000);
+        }
+        break;
+
+      case 'message':
+        if (data) {
+          setMessage(data);
+          setTimeout(() => setMessage(''), 3000);
+        }
+        break;
+
+      case 'notification':
+        if (data) {
+          setMessage(data);
+          setTimeout(() => setMessage(''), 3000);
         }
         break;
       case 'feedback':
@@ -276,13 +335,19 @@ export const EscapeGame: React.FC = () => {
             description: 'Un vieux journal contenant des notes énigmatiques'
           };
           
-          if (!gameState.inventory.some(item => item.id === bookItem.id)) {
-            setGameState(prevState => ({
+          setGameState(prevState => {
+            // Vérifier si l'item existe déjà dans l'état actuel
+            const itemExists = prevState.inventory.some(item => item.id === bookItem.id);
+            if (itemExists) {
+              return prevState;
+            }
+            
+            return {
               ...prevState,
               inventory: [...prevState.inventory, bookItem]
-            }));
-            setTimeout(() => setMessage(''), 3000);
-          }
+            };
+          });
+          setTimeout(() => setMessage(''), 3000);
         } else if (objectId === 'shadow-riddle-symbol') {
           const shadowRiddle: InventoryItem = {
             id: 'shadow-riddle',
@@ -294,10 +359,18 @@ export const EscapeGame: React.FC = () => {
               answer: 'OMBRE'
             }
           };
-          setGameState(prevState => ({
-            ...prevState,
-            inventory: [...prevState.inventory, shadowRiddle]
-          }));
+          setGameState(prevState => {
+            // Vérifier si l'item existe déjà dans l'état actuel
+            const itemExists = prevState.inventory.some(item => item.id === shadowRiddle.id);
+            if (itemExists) {
+              return prevState;
+            }
+            
+            return {
+              ...prevState,
+              inventory: [...prevState.inventory, shadowRiddle]
+            };
+          });
           setTimeout(() => setMessage(''), 3000);
         } else if (objectId === 'sun-symbol') {
           const sunRiddle: InventoryItem = {
@@ -310,10 +383,18 @@ export const EscapeGame: React.FC = () => {
               answer: "SOLEIL"
             }
           };
-          setGameState(prevState => ({
-            ...prevState,
-            inventory: [...prevState.inventory, sunRiddle]
-          }));
+          setGameState(prevState => {
+            // Vérifier si l'item existe déjà dans l'état actuel
+            const itemExists = prevState.inventory.some(item => item.id === sunRiddle.id);
+            if (itemExists) {
+              return prevState;
+            }
+            
+            return {
+              ...prevState,
+              inventory: [...prevState.inventory, sunRiddle]
+            };
+          });
           setTimeout(() => setMessage(''), 3000);
         } else if (objectId === 'ancient-book') {
           const bookRiddle: InventoryItem = {
@@ -326,10 +407,18 @@ export const EscapeGame: React.FC = () => {
               answer: "LIVRE"
             }
           };
-          setGameState(prevState => ({
-            ...prevState,
-            inventory: [...prevState.inventory, bookRiddle]
-          }));
+          setGameState(prevState => {
+            // Vérifier si l'item existe déjà dans l'état actuel
+            const itemExists = prevState.inventory.some(item => item.id === bookRiddle.id);
+            if (itemExists) {
+              return prevState;
+            }
+            
+            return {
+              ...prevState,
+              inventory: [...prevState.inventory, bookRiddle]
+            };
+          });
           setTimeout(() => setMessage(''), 3000);
         }
         break;
@@ -342,10 +431,18 @@ export const EscapeGame: React.FC = () => {
           name: 'Énigme mystérieuse',
           description: 'Une énigme qui semble liée au tableau...'
         };
-        setGameState(prevState => ({
-          ...prevState,
-          inventory: [...prevState.inventory, riddleItem]
-        }));
+        setGameState(prevState => {
+          // Vérifier si l'item existe déjà dans l'état actuel
+          const itemExists = prevState.inventory.some(item => item.id === riddleItem.id);
+          if (itemExists) {
+            return prevState;
+          }
+          
+          return {
+            ...prevState,
+            inventory: [...prevState.inventory, riddleItem]
+          };
+        });
         break;
 
       case 'add_key_to_inventory':
@@ -369,10 +466,18 @@ export const EscapeGame: React.FC = () => {
           };
         }
         
-        setGameState(prevState => ({
-          ...prevState,
-          inventory: [...prevState.inventory, keyItem]
-        }));
+        setGameState(prevState => {
+          // Vérifier si l'item existe déjà dans l'état actuel
+          const itemExists = prevState.inventory.some(item => item.id === keyItem.id);
+          if (itemExists) {
+            return prevState;
+          }
+          
+          return {
+            ...prevState,
+            inventory: [...prevState.inventory, keyItem]
+          };
+        });
         break;
 
       case 'prompt_code':
@@ -392,15 +497,9 @@ export const EscapeGame: React.FC = () => {
           
           setGameState(prevState => ({
             ...prevState,
-            currentRoom: 'laboratory'
+            currentRoom: 'laboratory',
+            unlockedRooms: Array.from(new Set([...prevState.unlockedRooms, 'laboratory']))
           }));
-          
-          if (!isOfflineMode) {
-            saveGameState({
-              ...gameState,
-              currentRoom: 'laboratory'
-            }).catch(console.error);
-          }
           
           setTimeout(() => {
             setMessage('Vous entrez dans le laboratoire secret !');
@@ -450,7 +549,12 @@ export const EscapeGame: React.FC = () => {
           if (response.ok) {
             const data = await response.json();
             if (data.data) {
-              setGameState(data.data.gameState);
+              // Nettoyer l'inventaire des doublons lors du chargement
+              const cleanedGameState = {
+                ...data.data.gameState,
+                inventory: cleanInventory(data.data.gameState.inventory || [])
+              };
+              setGameState(cleanedGameState);
               setMessage('Partie chargée avec succès');
               setTimeout(() => setMessage(''), 2000);
               return;
@@ -620,19 +724,101 @@ Et le deuxième est plus petit que le quatrième.`,
 
   // Gestionnaire pour le changement de salle
   const handleRoomChange = useCallback((newRoom: 'library' | 'laboratory' | 'secret-chamber') => {
+    // Debug: afficher l'état actuel
+    console.log('Tentative de changement de salle:', {
+      from: gameState.currentRoom,
+      to: newRoom,
+      unlockedRooms: gameState.unlockedRooms
+    });
+
+    // Vérifier si la salle de destination est déverrouillée
+    if (!gameState.unlockedRooms.includes(newRoom)) {
+      const roomNames = {
+        library: 'bibliothèque',
+        laboratory: 'laboratoire',
+        'secret-chamber': 'chambre secrète'
+      };
+      
+      setMessage(`La ${roomNames[newRoom]} n'est pas encore accessible. Salles déverrouillées: ${gameState.unlockedRooms.join(', ')}`);
+      setTimeout(() => setMessage(''), 5000);
+      return;
+    }
+
+    // Si c'est déjà la salle courante, ne rien faire
+    if (gameState.currentRoom === newRoom) {
+      setMessage('Vous êtes déjà dans cette salle.');
+      setTimeout(() => setMessage(''), 2000);
+      return;
+    }
+
+    const roomNames = {
+      library: 'la bibliothèque',
+      laboratory: 'le laboratoire',
+      'secret-chamber': 'la chambre secrète'
+    };
+
     setIsTransitioning(true);
     setGameState(prevState => ({
       ...prevState,
-      currentRoom: newRoom,
-      unlockedRooms: Array.from(new Set([...prevState.unlockedRooms, newRoom]))
+      currentRoom: newRoom
     }));
-    setTimeout(() => setIsTransitioning(false), 1000);
-  }, []);
+    setMessage(`Vous vous dirigez vers ${roomNames[newRoom]}...`);
+    
+    setTimeout(() => {
+      setIsTransitioning(false);
+      setMessage(`Vous êtes maintenant dans ${roomNames[newRoom]}.`);
+      setTimeout(() => setMessage(''), 2000);
+    }, 1000);
+  }, [gameState.unlockedRooms, gameState.currentRoom]);
 
   // Gestionnaire pour le redémarrage du jeu
-  const handleRestart = () => {
-    setGameState(initialGameState);
-    setShowPauseMenu(false);
+  const handleRestart = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setMessage('Token d\'authentification manquant');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_URL}/game/reset`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erreur lors de la réinitialisation du jeu');
+      }
+
+      const data = await response.json();
+      if (data.status === 'success') {
+        setGameState(data.data.gameState);
+        setShowPauseMenu(false);
+        setMessage('Partie réinitialisée avec succès');
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        throw new Error(data.message || 'Erreur lors de la réinitialisation du jeu');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la réinitialisation de la partie:', error);
+      setMessage('Erreur lors de la réinitialisation. Tentative en mode local...');
+      // Fallback en mode local si l'API échoue
+      setGameState(initialGameState);
+      setShowPauseMenu(false);
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Gestionnaire pour retourner à l'intro
+  const handleReturnToIntro = () => {
+    navigate('/intro');
   };
 
   const handleInventoryItemClick = useCallback((item: InventoryItem) => {
@@ -765,46 +951,38 @@ Et le deuxième est plus petit que le quatrième.`,
                 <li>ZQSD / Flèches : Se déplacer</li>
                 <li>Souris : Regarder autour</li>
                 <li>E / Clic : Interagir avec les objets</li>
-                <li>I : Ouvrir l'inventaire</li>
                 <li>M : Menu pause</li>
-                {gameState.currentRoom === 'laboratory' && (
-                  <>
-                    <li>R : Examiner au microscope</li>
-                    <li>C : Mélanger les produits chimiques</li>
-                  </>
-                )}
-                {gameState.currentRoom === 'secret-chamber' && (
-                  <li>P : Placer un artefact</li>
-                )}
               </ul>
             </div>
             <div className="instructions-section">
               <h3>Objectifs</h3>
               {gameState.currentRoom === 'library' && (
                 <ul>
+                  <li>Explorez tous les coins de la bibliothèque</li>
                   <li>Trouvez le livre mystérieux</li>
-                  <li>Déchiffrez le code du tiroir</li>
-                  <li>Découvrez ce qui se cache derrière le tableau</li>
-                  <li>Trouvez la clé du laboratoire</li>
+                  <li>Déchiffrez les énigmes</li>
+                  <li>Collectez la clé du laboratoire</li>
+                  <li>rejoindre le laboratoire</li>
                 </ul>
               )}
               {gameState.currentRoom === 'laboratory' && (
                 <ul>
-                  <li>Examinez les échantillons au microscope</li>
-                  <li>Trouvez la bonne combinaison de produits chimiques</li>
-                  <li>Récupérez la clé en cristal</li>
-                  <li>Localisez la porte secrète</li>
+                 <li>Explorez tous les coins du laboratoire</li>
+                  <li>résolvez les égnimes</li>
+                  <li>Récupérez la clé en cristal</li> 
+                  <li>Trouvez l'entrée vers la chambre secrète</li>
                 </ul>
               )}
               {gameState.currentRoom === 'secret-chamber' && (
                 <ul>
-                  <li>Examinez le bureau du Professeur</li>
-                  <li>Trouvez l'orbe de cristal</li>
-                  <li>Placez l'orbe sur le piédestal</li>
-                  <li>Découvrez le secret final</li>
+                  <li>Explorez le bureau du Professeur mystérieux</li>
+                  <li>Résolvez les énigmes des artefacts anciens</li>
+                  <li>déverrouiller l'artefact sacré</li>
+                  <li>Découvrez le secret ultime et terminez votre quête</li>
                 </ul>
               )}
             </div>
+            
           </div>
 
           {/* Menu Pause */}
@@ -812,6 +990,7 @@ Et le deuxième est plus petit que le quatrième.`,
             <PauseMenu
               onClose={() => setShowPauseMenu(false)}
               onRestart={handleRestart}
+              onReturnToIntro={handleReturnToIntro}
               currentRoom={gameState.currentRoom}
               unlockedRooms={gameState.unlockedRooms || ['library']}
               onRoomChange={handleRoomChange}

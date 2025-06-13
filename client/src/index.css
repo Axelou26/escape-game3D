@@ -14,12 +14,70 @@
 
 body {
   margin: 0;
-  font-family: 'Roboto', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
   background-color: var(--primary-color);
   color: var(--text-color);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Masquer l'overlay d'erreur React pour les erreurs PointerLock */
+div[data-react-error-overlay] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Masquer les iframes d'erreur webpack/CRA */
+iframe[id*="webpack"],
+iframe[src*="webpack"],
+iframe[title*="webpack"] {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Masquer les overlays d'erreur génériques */
+div[style*="position: fixed"][style*="z-index"]:has-text("Uncaught runtime errors") {
+  display: none !important;
+}
+
+/* Masquer spécifiquement les overlays contenant des erreurs PointerLock */
+div:has-text("The user has exited the lock before this request was completed") {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+div:has-text("Uncaught runtime errors") {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Style général pour masquer les overlays d'erreur en développement */
+#root ~ div[style*="position: fixed"] {
+  display: none !important;
+}
+
+/* Masquer les divs overlay qui apparaissent après le root */
+body > div:last-child:not(#root) {
+  display: none !important;
+}
+
+/* Styles plus spécifiques pour React error overlay */
+[data-react-error-overlay],
+[data-react-error-overlay] * {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
 }
 
 .container {

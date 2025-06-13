@@ -8,6 +8,7 @@ import { RiddleSecret4 } from '../../ui/RiddleSecret4/RiddleSecret4';
 import { CodeInput } from '../../ui/CodeInput/CodeInput';
 import { SuccessMessage } from '../../ui/SuccessMessage/SuccessMessage';
 import { useNavigate } from 'react-router-dom';
+import { handlePointerLockErrors } from '../../../utils/errorHandler';
 
 
 
@@ -457,6 +458,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     // Configuration des contrôles
     if (!controlsRef.current) {
       const controls = new PointerLockControls(camera, document.body);
+      handlePointerLockErrors(controls);
       controlsRef.current = controls;
     }
 
