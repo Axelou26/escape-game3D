@@ -78,12 +78,12 @@ Et le deuxième est plus petit que le quatrième.`,
       {
         id: 'riddle-wisdom',
         roomId: 'secret-chamber',
-        name: 'Énigme de Sagesse',
+        name: 'XXXC',
         description: 'Une énigme cachée dans un livre ancien',
         content: {
-          riddle: "Je porte les pensées d'un homme à un autre,\nJe traverse le monde sans bouger.\nObserve ma dernière lettre, trouve sa position dans l'alphabet,\net tu auras le 3e chiffre du code.\nQui suis-je ?",
-          answer: 'LIVRE',
-          hint: 'La dernière lettre de LIVRE est E, qui est la 5e lettre de l\'alphabet'
+          riddle: "Mon domaine n'est ni maison ni château,\nPourtant, chaque jour, on y entre sans fardeau.\n\nOn y cherche des clés, mais pas de métal,\nPlutôt celles qui ouvrent un savoir vital.\n\nSilencieux parfois, agité souvent,\nJ'abrite l'esprit des petits et des grands.\nQui suis je?\n\ncompte mes voyelles et tu trouve le chiffre pour le code",
+          answer: '3',
+          hint: 'nous y sommes actuellement'
         },
         points: 75,
         position: { x: -3, y: 1.5, z: -2 },
@@ -92,12 +92,12 @@ Et le deuxième est plus petit que le quatrième.`,
       {
         id: 'riddle-shadow',
         roomId: 'secret-chamber',
-        name: 'Énigme des Ombres',
+        name: 'XXCX',
         description: 'Une énigme mystérieuse apparue sur le symbole mystique',
         content: {
-          riddle: "Je suis ton reflet sans lumière,\nJe te suis sans bruit, mais disparais dans l'obscurité.\nCompte mes lettres et tu trouveras le 1er chiffre du code.\nQui suis-je ?",
-          answer: 'OMBRE',
-          hint: 'OMBRE a 5 lettres, donc le premier chiffre est 5'
+          riddle: "Je transmets les pensées d'un homme à un autre,\nJe traverse le monde et pourtant je ne bouge pas.\nQui suis-je ?\nObserve ma dernière lettre, trouve sa position dans l'alphabet,\net tu auras le chiffre du code.",
+          answer: '5',
+          hint: 'l ancêtre du SMS'
         },
         points: 75,
         position: { x: 2, y: 1.8, z: -5 },
@@ -106,12 +106,12 @@ Et le deuxième est plus petit que le quatrième.`,
       {
         id: 'riddle-mirror',
         roomId: 'secret-chamber',
-        name: 'Énigme du Miroir',
+        name: 'XCXX',
         description: 'Une énigme gravée dans les hiéroglyphes',
         content: {
-          riddle: "Je reflète la vérité sans jamais parler.\nMa première lettre détient un nombre ancien.\nTrouve sa position dans l'alphabet, additionne ses chiffres,\net tu sauras le 2e chiffre du code.\nQui suis-je ?",
-          answer: 'MIROIR',
-          hint: 'M est la 13e lettre de l\'alphabet. 1 + 3 = 4, donc le deuxième chiffre est 4'
+          riddle: "Je montre tout mais ne garde rien,\nJe reflète le mal comme le bien.\nDans mon monde, tout est inversé,\nLa droite devient la gauche, c'est prouvé.\nQui suis-je, moi qui révèle la vérité,\nMais dans un monde de réalité ?\nTrouve ma position dans l'alphabet, et tu sauras le chiffre",
+          answer: '3',
+          hint: 'Je montre votre reflet...'
         },
         points: 75,
         position: { x: -4, y: 2, z: 3 },
@@ -120,12 +120,12 @@ Et le deuxième est plus petit que le quatrième.`,
       {
         id: 'riddle-light',
         roomId: 'secret-chamber',
-        name: 'Énigme de la Lumière',
+        name: 'CXXX',
         description: 'Une énigme mystérieuse gravée sur un symbole solaire',
         content: {
-          riddle: "Je commence au lever du jour,\nEt m'efface lorsque les paupières tombent.\nCompte le nombre de voyelles dans mon nom,\net tu connaîtras le 4e chiffre du code.\nQui suis-je ?",
-          answer: 'SOLEIL',
-          hint: 'SOLEIL contient 3 voyelles : O, E, I. Donc le quatrième chiffre est 3'
+          riddle: "Un marchand dans un village médiéval, portant un panier de six pommes dorées cueillies à l'aube.\nEn chemin vers le marché, ton ami forgeron te demande un partage. Tu lui donnes la moitié des pommes.\nUne herboriste t'offre ensuite quatre pommes pour une herbe rare, que tu ajoutes au panier.\nMais un corbeau voleur\ndérobe une pomme avant que tu n'atteignes l'étal.\nCombien de pommes reste-t-il dans ton panier ?",
+          answer: '6',
+          hint: 'fais le calcul'
         },
         points: 75,
         position: { x: 5, y: 2.5, z: -8 },

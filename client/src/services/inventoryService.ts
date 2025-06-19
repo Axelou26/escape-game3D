@@ -196,6 +196,13 @@ class InventoryService {
   isOnline(): boolean {
     return !this.isOfflineMode;
   }
+
+  // Réinitialiser complètement l'inventaire (pour le redémarrage du jeu)
+  resetInventory(): void {
+    this.offlineInventory = [];
+    this.saveToLocalStorage();
+    console.log('🔄 Inventaire service réinitialisé');
+  }
 }
 
 export const inventoryService = new InventoryService(); 

@@ -123,17 +123,6 @@ export const Inventory: React.FC<InventoryProps> = ({ items, onUseItem, onItemCl
               <span className="item-status">{getItemStatusIcon(item)}</span>
             </div>
             <span className="item-name">{item.name}</span>
-            {selectedItem === item.id && (
-              <div className="item-details">
-                <p><strong>📝 Description:</strong> {item.description}</p>
-                {item.content?.riddle && (
-                  <p><strong>🧩 Type:</strong> Énigme interactive</p>
-                )}
-                {item.type === 'key' && (
-                  <p><strong>🔑 Utilisation:</strong> Peut ouvrir des portes ou mécanismes</p>
-                )}
-              </div>
-            )}
           </div>
         ))}
         {items.length === 0 && (

@@ -41,6 +41,38 @@ export const EscapeGame: React.FC = () => {
     artifactUnlocked: false
   });
 
+  // Protection contre la perte accidentelle d'inventaire
+  const [allowInventoryReset, setAllowInventoryReset] = useState(false);
+  
+  const protectedSetGameState = useCallback((newState: GameState | ((prevState: GameState) => GameState)) => {
+    if (typeof newState === 'function') {
+      setGameState(prevState => {
+        const computedState = newState(prevState);
+        // Vérifier si l'inventaire est en train d'être vidé accidentellement (sauf si explicitement autorisé)
+        if (!allowInventoryReset && prevState.inventory.length > 0 && computedState.inventory.length === 0) {
+          console.warn('🚨 PROTECTION: Tentative de vider l\'inventaire via setGameState détectée!');
+          console.warn('Inventaire actuel:', prevState.inventory);
+          console.warn('Nouvel état proposé:', computedState);
+          // Conserver l'inventaire existant
+          return { ...computedState, inventory: prevState.inventory };
+        }
+        return computedState;
+      });
+    } else {
+      setGameState(prevState => {
+        // Vérifier si l'inventaire est en train d'être vidé accidentellement (sauf si explicitement autorisé)
+        if (!allowInventoryReset && prevState.inventory.length > 0 && newState.inventory.length === 0) {
+          console.warn('🚨 PROTECTION: Tentative de vider l\'inventaire via setGameState détectée!');
+          console.warn('Inventaire actuel:', prevState.inventory);
+          console.warn('Nouvel état proposé:', newState);
+          // Conserver l'inventaire existant
+          return { ...newState, inventory: prevState.inventory };
+        }
+        return newState;
+      });
+    }
+  }, [allowInventoryReset]);
+
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [currentCodeType, setCurrentCodeType] = useState<'drawer' | 'painting'>('drawer');
   const [message, setMessage] = useState<string>('');
@@ -155,8 +187,19 @@ export const EscapeGame: React.FC = () => {
     }
   }, [isOfflineMode, gameState]);
 
-  const updateGameState = useCallback((updates: Partial<GameState>) => {
+  const updateGameState = useCallback((updates: Partial<GameState>, isReset = false) => {
     setGameState(prevState => {
+      // PROTECTION: Empêcher la perte accidentelle d'inventaire (sauf lors d'un reset)
+      if (!isReset && updates.inventory !== undefined && prevState.inventory.length > 0 && updates.inventory.length === 0) {
+        console.warn('🚨 PROTECTION: Tentative de vider l\'inventaire détectée et bloquée!');
+        console.warn('Inventaire actuel:', prevState.inventory);
+        console.warn('Tentative de mise à jour:', updates);
+        // Ne pas appliquer la mise à jour qui viderait l'inventaire
+        const safeUpdates = { ...updates };
+        delete safeUpdates.inventory;
+        return { ...prevState, ...safeUpdates };
+      }
+      
       const newState = { ...prevState, ...updates };
       // Nettoyer l'inventaire si il a été modifié
       if (updates.inventory) {
@@ -329,6 +372,13 @@ export const EscapeGame: React.FC = () => {
             itemType = 'riddle';
             itemName = 'Énigme de Sagesse';
             itemDescription = 'Une énigme cachée dans un livre ancien...';
+            itemContent = riddleData.content;
+          } else if (objectId === 'mirror-riddle-glyph') {
+            const riddleData = await gameApi.getRiddleContent('riddle-mirror');
+            itemId = 'riddle-mirror';
+            itemType = 'riddle';
+            itemName = 'Énigme du Miroir';
+            itemDescription = 'Une énigme gravée dans les hiéroglyphes...';
             itemContent = riddleData.content;
           } else {
             // Objet générique
@@ -767,32 +817,62 @@ export const EscapeGame: React.FC = () => {
 
       const data = await response.json();
       if (data.status === 'success') {
+        // Autoriser temporairement la réinitialisation de l'inventaire
+        setAllowInventoryReset(true);
+        
+        // Réinitialiser complètement l'inventaire service
+        inventoryService.resetInventory();
+        
+        // Réinitialiser l'état principal du jeu
         setGameState(data.data.gameState);
+        
+        // Nettoyer également le localStorage pour l'inventaire
+        const gameStateFromStorage = localStorage.getItem('gameState');
+        if (gameStateFromStorage) {
+          try {
+            const parsedState = JSON.parse(gameStateFromStorage);
+            parsedState.inventory = [];
+            localStorage.setItem('gameState', JSON.stringify(parsedState));
+          } catch (error) {
+            console.error('Erreur lors du nettoyage du localStorage:', error);
+          }
+        }
+        
+        // Nettoyer complètement le localStorage
+        localStorage.removeItem('gameState');
+        
+        // Réinitialiser TOUS les états locaux
         setShowPauseMenu(false);
+        setShowCodeInput(false);
+        setCurrentCodeType('drawer');
         setMessage('Partie réinitialisée avec succès');
-        setTimeout(() => setMessage(''), 3000);
+        setCodeErrorMessage('');
+        setShowBook(false);
+        setShowRiddle(false);
+        setCurrentRiddle(undefined);
+        setIsTransitioning(false);
+        setSelectedRiddle(null);
+        setIsPaintingCodeValid(false);
+        
+        // Désactiver l'autorisation de réinitialisation et synchroniser l'inventaire
+        setTimeout(async () => {
+          setAllowInventoryReset(false);
+          setMessage('');
+          // Synchroniser le service d'inventaire avec le nouvel état
+          try {
+            await inventoryService.syncWithServer();
+          } catch (error) {
+            console.error('Erreur lors de la synchronisation de l\'inventaire:', error);
+          }
+        }, 3000);
+        
+        console.log('🔄 Réinitialisation complète terminée - Inventaire:', data.data.gameState.inventory);
       } else {
         throw new Error(data.message || 'Erreur lors de la réinitialisation du jeu');
       }
     } catch (error) {
       console.error('Erreur lors de la réinitialisation de la partie:', error);
-      setMessage('Erreur lors de la réinitialisation. Tentative en mode local...');
-      // Fallback en mode local si l'API échoue
-      setGameState({
-        score: 0,
-        elapsedTime: 0,
-        hintsUsed: 0,
-        attemptsCount: 0,
-        currentRoom: 'library',
-        inventory: [],
-        unlockedRooms: ['library'],
-        solvedPuzzles: [],
-        microscopeEnigmeResolved: false,
-        periodicTableUnlocked: false,
-        computerUnlocked: false,
-        gameCompleted: false,
-        artifactUnlocked: false
-      });
+      setMessage('Erreur lors de la réinitialisation. Veuillez réessayer.');
       setShowPauseMenu(false);
       setTimeout(() => setMessage(''), 3000);
     } finally {

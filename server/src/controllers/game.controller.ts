@@ -258,6 +258,17 @@ export const gameController = {
         }
       );
 
+      // Supprimer tous les objets de l'inventaire de l'utilisateur
+      const { QueryTypes } = require('sequelize');
+      const { sequelize } = require('../models/sequelize');
+      await sequelize.query(
+        'DELETE FROM inventory WHERE user_id = ?',
+        {
+          replacements: [req.user.id],
+          type: QueryTypes.DELETE
+        }
+      );
+
       // Créer une nouvelle partie
       const newGame = await Game.create({
         userId: req.user.id,
@@ -275,9 +286,14 @@ export const gameController = {
           unlockedRooms: ['library'],
           computerUnlocked: false,
           gameCompleted: false,
-          artifactUnlocked: false
+          artifactUnlocked: false,
+          hintsUsed: 0,
+          attemptsCount: 0,
+          solvedPuzzles: []
         }
       });
+
+      console.log(`🔄 Partie réinitialisée pour l'utilisateur ${req.user.id} - Inventaire vidé`);
 
       res.json({
         status: 'success',
