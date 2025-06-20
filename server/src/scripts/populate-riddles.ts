@@ -76,7 +76,7 @@ Et le deuxième est plus petit que le quatrième.`,
     // ========== ÉNIGMES DE LA CHAMBRE SECRÈTE ==========
     const secretChamberRiddles = [
       {
-        id: 'riddle-wisdom',
+        id: 'riddle-school',
         roomId: 'secret-chamber',
         name: 'XXXC',
         description: 'Une énigme cachée dans un livre ancien',
@@ -90,7 +90,7 @@ Et le deuxième est plus petit que le quatrième.`,
         isActive: true
       },
       {
-        id: 'riddle-shadow',
+        id: 'riddle-letter',
         roomId: 'secret-chamber',
         name: 'XXCX',
         description: 'Une énigme mystérieuse apparue sur le symbole mystique',
@@ -118,7 +118,7 @@ Et le deuxième est plus petit que le quatrième.`,
         isActive: true
       },
       {
-        id: 'riddle-light',
+        id: 'riddle-apples',
         roomId: 'secret-chamber',
         name: 'CXXX',
         description: 'Une énigme mystérieuse gravée sur un symbole solaire',
@@ -130,7 +130,8 @@ Et le deuxième est plus petit que le quatrième.`,
         points: 75,
         position: { x: 5, y: 2.5, z: -8 },
         isActive: true
-      }
+      },
+      
     ];
 
     // ========== CODES ET PUZZLES ==========
@@ -166,12 +167,50 @@ Et le deuxième est plus petit que le quatrième.`,
         isActive: true
       },
       {
+        id: 'beaker-sequence',
+        roomId: 'laboratory',
+        objectId: 'beaker-sequence',
+        name: 'Séquence des Béchers',
+        type: 'sequence' as const,
+        solution: 'beaker-rouge,beaker-orange,beaker-jaune,beaker-vert,beaker-bleu,beaker-violet',
+        hints: {
+          hints: [
+            'Examinez le microscope pour obtenir un indice',
+            'L\'ordre du spectre visible inversé',
+            'Rouge, Orange, Jaune, Vert, Bleu, Violet'
+          ]
+        },
+        points: 75,
+        penaltyPoints: -10,
+        description: 'Une séquence de couleurs à reproduire dans l\'ordre du spectre visible inversé',
+        isActive: true
+      },
+      {
+        id: 'computer-code',
+        roomId: 'laboratory',
+        objectId: 'computer-code',
+        name: 'Code de l\'Ordinateur',
+        type: 'code' as const,
+        solution: 'OHN',
+        hints: {
+          hints: [
+            'Regardez l\'énigme du tableau périodique',
+            'La réponse à l\'énigme des éléments est la clé',
+            'Oxygène, Hydrogène, et un métal précieux...'
+          ]
+        },
+        points: 100,
+        penaltyPoints: -15,
+        description: 'L\'ordinateur sécurisé du laboratoire nécessite un code basé sur les éléments',
+        isActive: true
+      },
+      {
         id: 'final-chamber-code',
         roomId: 'secret-chamber',
         objectId: 'final-mechanism',
         name: 'Code Final de la Chambre',
         type: 'code' as const,
-        solution: '5313',  // OMBRE(5) + MIROIR(13) + SOLEIL(3) selon les indices
+        solution: '6353',
         hints: {
           hints: [
             'Les énigmes des ombres, du miroir et de la lumière détiennent la clé.',

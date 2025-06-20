@@ -93,9 +93,22 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
   const collisionObjectsRef = useRef<THREE.Mesh[]>([]);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const frameIdRef = useRef<number>(0);
+  const frameCountRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const lastHoveredObject = useRef<THREE.Object3D | null>(null);
   const raycasterRef = useRef(new THREE.Raycaster());
+  const mysteriousBookCreated = useRef<boolean>(false);
+  const isCodeValidRef = useRef(isCodeValid);
+  
+  // Ajout d'une ref pour éviter la recreation en boucle
+  const isInitializedRef = useRef<boolean>(false);
+  const isDisposedRef = useRef<boolean>(false);
+  const isMountedRef = useRef<boolean>(false);
+
+  // Mettre à jour la ref à chaque changement de isCodeValid
+  useEffect(() => {
+    isCodeValidRef.current = isCodeValid;
+  }, [isCodeValid]);
 
   // Optimisation avec useMemo pour la scène et la caméra
   const scene = useMemo(() => new THREE.Scene(), []);
@@ -140,8 +153,26 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
     }
   };
 
+  // Effet pour gérer le montage initial
   useEffect(() => {
-    if (!mountRef.current) return;
+    isMountedRef.current = true;
+    isDisposedRef.current = false;
+
+    return () => {
+      isMountedRef.current = false;
+      isDisposedRef.current = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mountRef.current || !isMountedRef.current || isDisposedRef.current) return;
+
+    // Si déjà initialisé, on ne recrée pas la scène
+    if (isInitializedRef.current) {
+      return;
+    }
+
+    isInitializedRef.current = true;
 
     // Initialisation de la scène
     sceneRef.current = scene;
@@ -309,53 +340,72 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
       handleInteraction();
     };
 
-    // Animation optimisée
+    // Animation optimisée avec limitation de FPS
+    let fpsLimit = 60;
+    let fpsInterval = 1000 / fpsLimit;
+    let then = performance.now();
+    
     const animate = (time: number) => {
-      const delta = (time - lastTimeRef.current) / 1000;
-      lastTimeRef.current = time;
+      const now = time;
+      const elapsed = now - then;
 
-      if (controlsRef.current?.isLocked) {
-        const speed = 0.15 * (60 * delta); // Normalisation du mouvement basée sur les FPS
+      // Limiter le taux de rafraîchissement pour économiser les ressources
+      if (elapsed > fpsInterval) {
+        then = now - (elapsed % fpsInterval);
 
-        if (moveStateRef.current.forward) movePlayer(0, -speed);
-        if (moveStateRef.current.backward) movePlayer(0, speed);
-        if (moveStateRef.current.left) movePlayer(-speed, 0);
-        if (moveStateRef.current.right) movePlayer(speed, 0);
+        const delta = elapsed / 1000;
 
-        // Mise à jour du raycaster
-        raycasterRef.current.setFromCamera(new THREE.Vector2(0, 0), camera);
-        const intersects = raycasterRef.current.intersectObjects(scene.children, true);
+        if (controlsRef.current?.isLocked) {
+          const speed = 0.12 * Math.min(delta * 60, 2); // Limiter le delta max
 
-        // Réinitialiser l'objet précédemment survolé
-        if (lastHoveredObject.current) {
-          lastHoveredObject.current.userData.outlineMaterials?.forEach((material: THREE.Material) => {
-            (material as THREE.MeshBasicMaterial).opacity = 0;
-          });
-          lastHoveredObject.current = null;
+          if (moveStateRef.current.forward) movePlayer(0, -speed);
+          if (moveStateRef.current.backward) movePlayer(0, speed);
+          if (moveStateRef.current.left) movePlayer(-speed, 0);
+          if (moveStateRef.current.right) movePlayer(speed, 0);
+
+                     // Optimisation du raycasting - réduire la fréquence de vérification
+           if (frameCountRef.current % 3 === 0) { // Vérifier seulement 1 frame sur 3
+            raycasterRef.current.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const intersects = raycasterRef.current.intersectObjects(scene.children, true);
+
+            // Réinitialiser l'objet précédemment survolé
+            if (lastHoveredObject.current) {
+              lastHoveredObject.current.userData.outlineMaterials?.forEach((material: THREE.Material) => {
+                (material as THREE.MeshBasicMaterial).opacity = 0;
+              });
+              lastHoveredObject.current = null;
+            }
+
+            // Vérifier seulement les 3 premiers intersects pour optimiser
+            const maxIntersects = Math.min(intersects.length, 3);
+            for (let i = 0; i < maxIntersects; i++) {
+              const intersect = intersects[i];
+              let object: THREE.Object3D | null = intersect.object;
+              
+              // Remonter jusqu'à l'objet parent interactif
+              let depth = 0;
+              while (object && !object.userData.interactive && depth < 5) { // Limiter la profondeur de recherche
+                object = object.parent;
+                depth++;
+              }
+
+              if (object?.userData.interactive && !object.userData.collected) {
+                lastHoveredObject.current = object;
+                // Activer la surbrillance avec une opacité réduite pour économiser les ressources
+                object.userData.outlineMaterials?.forEach((material: THREE.Material) => {
+                  (material as THREE.MeshBasicMaterial).opacity = 0.2;
+                });
+                break;
+              }
+            }
+          }
         }
 
-        // Vérifier les nouvelles intersections
-        for (const intersect of intersects) {
-          let object: THREE.Object3D | null = intersect.object;
-          
-          // Remonter jusqu'à l'objet parent interactif
-          while (object && !object.userData.interactive) {
-            object = object.parent;
-          }
-
-          if (object?.userData.interactive) {
-            lastHoveredObject.current = object;
-            // Activer la surbrillance
-            object.userData.outlineMaterials?.forEach((material: THREE.Material) => {
-              (material as THREE.MeshBasicMaterial).opacity = 0.3;
-            });
-            break;
-          }
-        }
+        renderer.render(scene, camera);
+        frameIdRef.current++;
       }
 
-      renderer.render(scene, camera);
-      frameIdRef.current = requestAnimationFrame(animate);
+             frameIdRef.current = requestAnimationFrame(animate);
     };
 
     // Gestion du redimensionnement optimisée
@@ -387,21 +437,29 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
         while (object && !object.userData.interactive) {
           object = object.parent;
         }
-        if (object?.userData.interactive) {
+        if (object?.userData.interactive && !object.userData.collected) {
           switch (object.userData.id) {
             case 'laboratory-door':
-              if (isCodeValid) {
-                onInteract(object.userData.id, object.userData.type, 'enter_laboratory');
-              } else {
-                onInteract(object.userData.id, object.userData.type, 'examine');
-              }
+              // Vérifier si le joueur a la clé du laboratoire dans son inventaire
+              onInteract(object.userData.id, object.userData.type, isCodeValidRef.current ? 'enter_laboratory' : 'examine');
               break;
             case 'mysterious-book':
+              // Vérifier si le livre n'a pas déjà été collecté
+              if (object.userData.collected) {
+                break;
+              }
+              
+              // Marquer le livre comme collecté immédiatement
+              object.userData.collected = true;
+              object.userData.interactive = false;
+              
               onInteract(object.userData.id, object.userData.type, 'add_to_inventory');
-              // Retirer complètement l'objet de la scène pour éviter les interactions multiples
+              
+              // Retirer immédiatement l'objet de la scène
               if (object.parent) {
                 object.parent.remove(object);
               }
+              
               // Nettoyer les ressources de l'objet retiré
               object.traverse((child) => {
                 if (child instanceof THREE.Mesh) {
@@ -426,7 +484,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
       }
     };
 
-    // Création de la bibliothèque monumentale
+    // Création de la bibliothèque 3D
     const createGrandLibrary = () => {
       // Création du sol en parquet optimisé
       const createWoodenFloor = () => {
@@ -468,7 +526,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
 
       // Création de la bibliothèque murale 
       const createWallBookshelf = () => {
-        const createSingleBookshelf = (xOffset: number) => {
+        const createSingleBookshelf = (xOffset: number, zOffset: number, shelfIndex: number) => {
           const bookshelf = new THREE.Group();
 
           // Structure principale utilisant les géométries partagées
@@ -479,14 +537,28 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
           bookshelf.add(mainStructure);
 
           // Création des livres 
-          const createBooks = (sectionStart: number, sectionEnd: number, row: number) => {
+          const createBooks = (sectionStart: number, sectionEnd: number, row: number, shelfXOffset: number, section: number, shelfIndex: number) => {
             const books = new THREE.Group();
               let xPos = sectionStart + 0.2;
               const yPos = -1.2 + row * 0.7;
 
               while (xPos < sectionEnd) {
                 const book = new THREE.Group();
-                const bookColor = bookColors[Math.floor(Math.random() * bookColors.length)];
+                let bookColor = bookColors[Math.floor(Math.random() * bookColors.length)];
+                let isMysterious = false;
+
+                // Créer le livre mystérieux UNIQUEMENT dans la première étagère (index 0 = étagère gauche du fond)
+                if (!mysteriousBookCreated.current && 
+                    shelfIndex === 0 && 
+                    row === 3 && 
+                    section === 0 && 
+                    Math.abs(xPos - (sectionStart + 0.2)) < 0.1) {
+                  bookColor = 0x4A0404; // Rouge vin foncé pour le livre mystérieux
+                  isMysterious = true;
+                  book.name = 'mysterious-book-object';
+                  mysteriousBookCreated.current = true; // Marquer comme créé
+                }
+
               const bookMaterial = new THREE.MeshStandardMaterial({
                     color: bookColor,
                     roughness: 0.9, 
@@ -517,6 +589,20 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
               spineDetail.position.z = 0.3;
               book.add(spineDetail);
 
+                // Si c'est le livre mystérieux, ajouter un symbole distinctif
+                if (isMysterious) {
+                  const symbol = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.32, 0.02, 0.1),
+                    sharedMaterials.gold
+                  );
+                  symbol.position.z = 0.3;
+                  symbol.position.y = 0.1;
+                  book.add(symbol);
+                  
+                  // Rendre le livre mystérieux interactif
+                  makeInteractive(book, 'mysterious-book', 'book');
+                }
+
                 book.position.set(xPos, yPos, 0.95);
                 book.rotation.z = (Math.random() - 0.5) * 0.1;
               books.add(book);
@@ -531,7 +617,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
             const sectionStart = -4.5 + section * 3;
             const sectionEnd = sectionStart + 2.8;
             for (let row = 0; row < 4; row++) {
-              bookshelf.add(createBooks(sectionStart, sectionEnd, row));
+              bookshelf.add(createBooks(sectionStart, sectionEnd, row, xOffset, section, shelfIndex));
             }
           }
 
@@ -547,8 +633,8 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
           { x: 5, z: 9, rot: Math.PI }
         ];
 
-        positions.forEach(pos => {
-          const shelf = createSingleBookshelf(pos.x);
+        positions.forEach((pos, index) => {
+          const shelf = createSingleBookshelf(pos.x, pos.z, index);
           shelf.position.z = pos.z;
           shelf.rotation.y = pos.rot;
           scene.add(shelf);
@@ -689,47 +775,6 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
 
       // Création des éléments interactifs 
       const createInteractiveObjects = () => {
-        // Vérifier si le livre mystérieux existe déjà dans la scène
-        const existingBook = scene.getObjectByName('mysterious-book-object');
-        if (existingBook) {
-          return;
-        }
-
-        // Livre mystérieux intégré dans la bibliothèque
-        const mysteriousBook = new THREE.Group();
-        mysteriousBook.name = 'mysterious-book-object'; // Nom unique pour identification
-        const mysteriousBookBody = new THREE.Mesh(
-          sharedGeometries.book,
-          new THREE.MeshStandardMaterial({
-            color: 0x4A0404, // Rouge vin foncé
-            roughness: 0.7,
-            metalness: 0.2
-          })
-        );
-        mysteriousBook.add(mysteriousBookBody);
-
-        // Ajout de détails dorés distinctifs
-        const goldDetail = new THREE.Mesh(
-          new THREE.BoxGeometry(0.31, 0.03, 0.81),
-          sharedMaterials.gold
-        );
-        goldDetail.position.y = 0.65 * 0.3;
-        mysteriousBook.add(goldDetail);
-
-        // Symbole mystérieux sur le dos du livre
-        const symbol = new THREE.Mesh(
-          new THREE.BoxGeometry(0.32, 0.02, 0.1),
-          sharedMaterials.gold
-        );
-        symbol.position.z = 0.3;
-        mysteriousBook.add(symbol);
-
-        // Positionnement dans la bibliothèque (étagère du haut, section gauche)
-        mysteriousBook.position.set(-8.95, 1.9, -7.9);
-        mysteriousBook.rotation.z = (Math.random() - 0.5) * 0.1;
-        makeInteractive(mysteriousBook, 'mysterious-book', 'book');
-        scene.add(mysteriousBook);
-
         // Vérifier si le tiroir verrouillé existe déjà dans la scène
         const existingDrawer = scene.getObjectByName('locked-drawer-object');
         if (!existingDrawer) {
@@ -1371,8 +1416,19 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
       Object.values(sharedMaterials).forEach(material => material.dispose());
 
       collisionObjectsRef.current = [];
+      
+      // Réinitialiser les flags
+      isInitializedRef.current = false;
+      mysteriousBookCreated.current = false;
     };
-  }, [scene, camera, isCodeValid]);
+  }, []);
+
+  // Effet séparé pour gérer les changements de isCodeValid sans recréer la scène
+  useEffect(() => {
+    // Ce useEffect ne fait que réagir aux changements de isCodeValid
+    // La logique de la porte est déjà gérée dans handleInteraction
+    console.log('Code validation status changed:', isCodeValid);
+  }, [isCodeValid]);
 
   return (
     <>

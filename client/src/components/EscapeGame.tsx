@@ -8,13 +8,14 @@ import { BookContent } from './ui/BookContent/BookContent';
 import { RiddleContent } from './ui/RiddleContent/RiddleContent';
 import { CodeInput } from './ui/CodeInput/CodeInput';
 import { GameHUD } from './ui/GameHUD/GameHUD';
+import { FPSCounter } from './ui/FPSCounter';
 import { PauseMenu } from './ui/PauseMenu/PauseMenu';
 import { InventoryItem, GameState } from '../types/gameTypes';
 import './game/EscapeGame.css';
 import { scoreService, ScoreEventType } from '../services/scoreService';
 import { gameApi } from '../services/gameApi';
-import { gameStateApi } from '../services/gameStateApi';
-import { secureTimer, TimerState } from '../services/secureTimer';
+import { gameStateApi, CurrentTimeResponse } from '../services/gameStateApi';
+
 import { inventoryService } from '../services/inventoryService';
 
 
@@ -356,28 +357,28 @@ export const EscapeGame: React.FC = () => {
             const riddleData = await gameApi.getRiddleContent('riddle-shadow');
             itemId = 'riddle-shadow';
             itemType = 'riddle';
-            itemName = 'Énigme des Ombres';
+            itemName = riddleData.name; // Utiliser le vrai nom de la base de données
             itemDescription = 'Une énigme mystérieuse apparue sur le symbole mystique...';
             itemContent = riddleData.content;
           } else if (objectId === 'sun-symbol') {
             const riddleData = await gameApi.getRiddleContent('riddle-light');
             itemId = 'riddle-light';
             itemType = 'riddle';
-            itemName = 'Énigme de la Lumière';
+            itemName = riddleData.name; // Utiliser le vrai nom de la base de données
             itemDescription = 'Une énigme mystérieuse gravée sur un symbole solaire...';
             itemContent = riddleData.content;
           } else if (objectId === 'ancient-book') {
             const riddleData = await gameApi.getRiddleContent('riddle-wisdom');
             itemId = 'riddle-wisdom';
             itemType = 'riddle';
-            itemName = 'Énigme de Sagesse';
+            itemName = riddleData.name; // Utiliser le vrai nom de la base de données
             itemDescription = 'Une énigme cachée dans un livre ancien...';
             itemContent = riddleData.content;
           } else if (objectId === 'mirror-riddle-glyph') {
             const riddleData = await gameApi.getRiddleContent('riddle-mirror');
             itemId = 'riddle-mirror';
             itemType = 'riddle';
-            itemName = 'Énigme du Miroir';
+            itemName = riddleData.name; // Utiliser le vrai nom de la base de données
             itemDescription = 'Une énigme gravée dans les hiéroglyphes...';
             itemContent = riddleData.content;
           } else {
@@ -581,61 +582,66 @@ export const EscapeGame: React.FC = () => {
     };
   }, []);
 
-  // Gérer le timer sécurisé
+  // Timer géré uniquement côté serveur
   useEffect(() => {
     if (isLoading || gameState.gameCompleted) return;
 
-    // Callback pour les mises à jour du timer
-    const handleTimerUpdate = (timerState: TimerState) => {
-      setGameState(prevState => {
-        if (prevState.gameCompleted) {
-          return prevState;
+    const fetchServerTime = async () => {
+      try {
+        const response = await gameStateApi.getCurrentTime();
+        if (response.status === 'success') {
+          setGameState(prevState => {
+            if (prevState.gameCompleted) {
+              return prevState;
+            }
+
+            // Mettre à jour avec le temps du serveur
+            return {
+              ...prevState,
+              elapsedTime: response.elapsedTime,
+              score: prevState.score // Garder le score local
+            };
+          });
+
+          // Vérifier si le jeu doit se terminer
+          if (response.elapsedTime >= response.maxDuration) {
+            setGameState(prevState => ({
+              ...prevState,
+              gameCompleted: true
+            }));
+            setMessage('Temps de jeu dépassé ! Partie terminée automatiquement.');
+            setTimeout(() => {
+              endGame();
+              navigate('/game-intro');
+            }, 3000);
+          }
         }
-
-        // Mettre à jour avec les données du timer sécurisé
-        const newState = {
-          ...prevState,
-          elapsedTime: timerState.elapsedTime,
-          score: timerState.score || prevState.score // Garder le score local si pas de score serveur
-        };
-
-        return newState;
-      });
-
-      // Gérer la fin de jeu automatique
-      if (timerState.gameEnded) {
-        setGameState(prevState => ({
-          ...prevState,
-          gameCompleted: true
-        }));
-        setMessage('Temps de jeu dépassé ! Partie terminée automatiquement.');
-        setTimeout(() => {
-          endGame();
-          navigate('/game-intro');
-        }, 3000);
+      } catch (error) {
+        console.error('Erreur lors de la récupération du temps:', error);
       }
     };
 
-    // Démarrer le timer sécurisé
-    secureTimer.onUpdate(handleTimerUpdate);
-    secureTimer.start(gameState.elapsedTime);
+    // Récupérer le temps immédiatement
+    fetchServerTime();
+
+    // Puis toutes les secondes
+    const intervalId = setInterval(fetchServerTime, 1000);
 
     return () => {
-      secureTimer.removeCallback(handleTimerUpdate);
-      secureTimer.stop();
+      clearInterval(intervalId);
     };
-  }, [isLoading, gameState.gameCompleted]); // Suppression des dépendances problématiques
+  }, [isLoading, gameState.gameCompleted, endGame, navigate]);
 
-  // Sauvegarde automatique séparée
+  // Sauvegarde automatique optimisée avec debounce plus long
   useEffect(() => {
     if (!isOfflineMode && !isLoading) {
       const timeoutId = setTimeout(() => {
         saveGameState(gameState).catch(console.error);
-      }, 1000); // Sauvegarde avec délai pour éviter trop d'appels
+      }, 2000); // Augmenté à 2 secondes pour réduire la fréquence
 
       return () => clearTimeout(timeoutId);
     }
-  }, [gameState.elapsedTime, gameState.score, isOfflineMode, isLoading, saveGameState]);
+  }, [gameState.score, isOfflineMode, isLoading, saveGameState]); // Suppression d'elapsedTime pour éviter trop de sauvegardes
 
   const handleCodeSubmit = useCallback(async (code: string) => {
     try {
@@ -953,6 +959,8 @@ export const EscapeGame: React.FC = () => {
     setTimeout(() => setMessage(''), 3000);
   }, []);
 
+
+
   return (
     <div className="escape-game">
       {isLoading ? (
@@ -1001,6 +1009,9 @@ export const EscapeGame: React.FC = () => {
             hintsUsed={gameState.hintsUsed}
             attemptsCount={gameState.attemptsCount}
           />
+
+          {/* Compteur FPS */}
+          <FPSCounter />
 
           {/* Panneau d'instructions */}
           <div className="instructions-panel">

@@ -4,7 +4,7 @@ import User from '../models/user.model';
 import bcrypt from 'bcrypt';
 import { AppError } from '../middleware/errorHandler';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'votre-secret-jwt';
+const JWT_SECRET = process.env.JWT_SECRET || 'dfrtyrer_5245_dfseFR';
 
 export const register = async (
   req: Request,

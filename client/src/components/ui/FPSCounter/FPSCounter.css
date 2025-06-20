@@ -1,0 +1,81 @@
+.fps-counter {
+  position: fixed;
+  top: 180px; /* Positionné en dessous du HUD principal */
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  z-index: 2001; /* Au-dessus du HUD principal pour être visible */
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+  min-width: 70px;
+  text-align: center;
+  opacity: 1;
+}
+
+.fps-label {
+  font-size: 10px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+}
+
+.fps-value {
+  font-size: 16px;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+  transition: color 0.3s ease;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .fps-counter {
+    top: 90px;
+    right: 10px;
+    min-width: 50px;
+    padding: 4px 8px;
+  }
+
+  .fps-label {
+    font-size: 8px;
+  }
+
+  .fps-value {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .fps-counter {
+    top: 60px;
+    right: 10px;
+    min-width: 45px;
+    padding: 3px 6px;
+  }
+
+  .fps-label {
+    font-size: 7px;
+  }
+
+  .fps-value {
+    font-size: 10px;
+  }
+}
+
+/* Orientation Landscape */
+@media (max-height: 500px) and (orientation: landscape) {
+  .fps-counter {
+    top: 80px;
+    right: 5px;
+    padding: 3px 6px;
+    min-width: 45px;
+  }
+
+  .fps-value {
+    font-size: 12px;
+  }
+} 

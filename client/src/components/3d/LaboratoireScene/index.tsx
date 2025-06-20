@@ -8,6 +8,44 @@ import { CodeInput } from '../../ui/CodeInput/CodeInput';
 import { handlePointerLockErrors } from '../../../utils/errorHandler';
 import { gameApi } from '../../../services/gameApi';
 
+// Géométries réutilisables pour optimiser les performances
+const sharedGeometries = {
+  box: new THREE.BoxGeometry(1, 1, 1),
+  cylinder: new THREE.CylinderGeometry(1, 1, 1, 8),
+  plane: new THREE.PlaneGeometry(1, 1),
+  sphere: new THREE.SphereGeometry(1, 8, 8)
+};
+
+// Matériaux réutilisables pour optimiser les performances
+const sharedMaterials = {
+  metal: new THREE.MeshStandardMaterial({
+    color: 0x666666,
+    roughness: 0.3,
+    metalness: 0.8
+  }),
+  plastic: new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    roughness: 0.8,
+    metalness: 0.1
+  }),
+  glass: new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.4,
+    roughness: 0.1
+  }),
+  wall: new THREE.MeshStandardMaterial({
+    color: 0xf0f0f0,
+    roughness: 0.7,
+    metalness: 0.1
+  }),
+  floor: new THREE.MeshStandardMaterial({
+    color: 0xcccccc,
+    roughness: 0.8,
+    metalness: 0.1
+  })
+};
+
 interface LaboratoireSceneProps {
   onInteract: (objectId: string, objectType: string, action?: string, data?: any) => void;
   onUpdateGameState: (updates: Partial<GameState>) => void;
@@ -69,34 +107,64 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     artifactUnlocked: false
   });
 
-  // Initialiser l'état du tableau périodique
+  // Optimisation des useEffect pour éviter les re-renders excessifs
   useEffect(() => {
-    periodicTableStateRef.current = {
-      isLocked: !periodicTableUnlocked,
-      globalUnlocked: periodicTableUnlocked,
-      riddleCollected: false
-    };
-    
-    setIsPeriodicTableLocked(!periodicTableUnlocked);
-    
-    if (!periodicTableUnlocked) {
-      onUpdateGameState({ 
-        periodicTableUnlocked: false,
-        microscopeEnigmeResolved: false 
-      });
-    }
-  }, [periodicTableUnlocked, onUpdateGameState]);
+    // Debounce pour éviter les mises à jour trop fréquentes
+    const timeoutId = setTimeout(() => {
+      periodicTableStateRef.current = {
+        isLocked: !periodicTableUnlocked,
+        globalUnlocked: periodicTableUnlocked,
+        riddleCollected: false
+      };
+      
+      setIsPeriodicTableLocked(!periodicTableUnlocked);
+      
+      if (!periodicTableUnlocked) {
+        onUpdateGameState({ 
+          periodicTableUnlocked: false,
+          microscopeEnigmeResolved: false 
+        });
+      }
+    }, 50); // Debounce de 50ms
 
-  // Synchroniser l'état local avec l'état global
+    return () => clearTimeout(timeoutId);
+  }, [periodicTableUnlocked]); // Suppression d'onUpdateGameState des dépendances
+
+  // Synchronisation optimisée avec debounce
   useEffect(() => {
     if (periodicTableUnlocked && !periodicTableStateRef.current.globalUnlocked) {
-      periodicTableStateRef.current = {
-        ...periodicTableStateRef.current,
-        isLocked: false,
-        globalUnlocked: true
-      };
-      setIsPeriodicTableLocked(false);
+      const timeoutId = setTimeout(() => {
+        periodicTableStateRef.current = {
+          ...periodicTableStateRef.current,
+          isLocked: false,
+          globalUnlocked: true
+        };
+        setIsPeriodicTableLocked(false);
+      }, 50);
+
+      return () => clearTimeout(timeoutId);
     }
+  }, [periodicTableUnlocked]);
+
+  // Optimisation de gameStateRef - mise à jour moins fréquente
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      const currentGameState: GameState = {
+        score: 0,
+        elapsedTime: 0,
+        currentRoom: 'laboratory' as const,
+        inventory: [],
+        microscopeEnigmeResolved: false,
+        periodicTableUnlocked: periodicTableUnlocked || false,
+        unlockedRooms: [],
+        computerUnlocked: false,
+        gameCompleted: false,
+        artifactUnlocked: false
+      };
+      gameStateRef.current = currentGameState;
+    }, 100); // Debounce de 100ms
+
+    return () => clearTimeout(timeoutId);
   }, [periodicTableUnlocked]);
 
   // Vérification de la séquence de couleurs
@@ -169,23 +237,6 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       onInteract('sequence', 'feedback', 'feedback', 'error');
     }
   }, [onInteract, onUpdateGameState]);
-
-  // Mettre à jour gameStateRef quand l'état change
-  useEffect(() => {
-    const currentGameState: GameState = {
-      score: 0,
-      elapsedTime: 0,
-      currentRoom: 'laboratory' as const,
-      inventory: [],
-      microscopeEnigmeResolved: false,
-      periodicTableUnlocked: periodicTableUnlocked || false,
-      unlockedRooms: [],
-      computerUnlocked: false,
-      gameCompleted: false,
-      artifactUnlocked: false
-    };
-    gameStateRef.current = currentGameState;
-  }, [periodicTableUnlocked]);
 
   // Vérification des collisions
   const checkCollision = useCallback((position: THREE.Vector3): boolean => {
@@ -855,42 +906,53 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
 
     createCollisionBoxes();
 
-    // Fonction pour mettre à jour la surbrillance en fonction de la distance
+    // Fonction optimisée pour mettre à jour la surbrillance
     const updateInteractiveHighlight = () => {
       if (!cameraRef.current || !sceneRef.current) return;
 
       const raycaster = new THREE.Raycaster();
       raycaster.setFromCamera(new THREE.Vector2(0, 0), cameraRef.current);
+      
+      // Optimisation : limiter la distance de raycasting
+      raycaster.far = 5; // Maximum 5 unités de distance
+      
       const intersects = raycaster.intersectObjects(sceneRef.current.children, true);
 
-      // Réinitialiser tous les objets interactifs
+      // Réinitialiser tous les objets interactifs (optimisé)
       sceneRef.current.traverse((object) => {
-        if (object instanceof THREE.Mesh && !object.userData.isOutline) {
+        if (object instanceof THREE.Mesh && !object.userData.isOutline && object.userData.interactive) {
           const outlineMesh = object.children.find(child => child.userData.isOutline);
           if (outlineMesh instanceof THREE.Mesh) {
-            (outlineMesh.material as THREE.MeshBasicMaterial).opacity = 0.15;
+            (outlineMesh.material as THREE.MeshBasicMaterial).opacity = 0.1; // Réduit pour économiser les ressources
           }
           if (object.material instanceof THREE.MeshStandardMaterial) {
-            object.material.emissiveIntensity = 0.1;
+            object.material.emissiveIntensity = 0.05; // Réduit pour économiser les ressources
           }
         }
       });
 
-      // Augmenter légèrement la surbrillance de l'objet visé
-      for (const intersect of intersects) {
+      // Vérifier seulement les 3 premiers intersects pour optimiser
+      const maxIntersects = Math.min(intersects.length, 3);
+      for (let i = 0; i < maxIntersects; i++) {
+        const intersect = intersects[i];
         let object: THREE.Object3D | null = intersect.object;
-        while (object && !object.userData.interactive) {
+        let depth = 0;
+        
+        // Limiter la profondeur de recherche comme dans la bibliothèque
+        while (object && !object.userData.interactive && depth < 5) {
           object = object.parent;
+          depth++;
         }
+        
         if (object?.userData.interactive) {
           object.traverse((child) => {
             if (child instanceof THREE.Mesh && !child.userData.isOutline) {
               const outlineMesh = child.children.find(c => c.userData.isOutline);
               if (outlineMesh instanceof THREE.Mesh) {
-                (outlineMesh.material as THREE.MeshBasicMaterial).opacity = 0.3;
+                (outlineMesh.material as THREE.MeshBasicMaterial).opacity = 0.25; // Réduit de 0.3 à 0.25
               }
               if (child.material instanceof THREE.MeshStandardMaterial) {
-                child.material.emissiveIntensity = 0.2;
+                child.material.emissiveIntensity = 0.15; // Réduit de 0.2 à 0.15
               }
             }
           });
@@ -1371,13 +1433,36 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     if (handleKeyUpRef.current) window.addEventListener('keyup', handleKeyUpRef.current);
     if (handleClickRef.current) window.addEventListener('click', handleClickRef.current);
 
-    // Animation avec le nouveau système de mouvement
+    // Animation optimisée avec limitation de FPS comme dans la bibliothèque
+    let fpsLimit = 60;
+    let fpsInterval = 1000 / fpsLimit;
+    let then = performance.now();
+    let frameCount = 0;
+    
     const animate = () => {
       if (isDisposedRef.current) return;
-      movePlayer();
-      if (rendererRef.current && cameraRef.current && sceneRef.current) {
-        rendererRef.current.render(sceneRef.current, cameraRef.current);
+      
+      const now = performance.now();
+      const elapsed = now - then;
+
+      // Limiter le taux de rafraîchissement pour économiser les ressources
+      if (elapsed > fpsInterval) {
+        then = now - (elapsed % fpsInterval);
+        
+        movePlayer();
+        
+        // Optimisation du raycasting - mise à jour moins fréquente
+        if (frameCount % 4 === 0) { // Seulement 1 frame sur 4 (15 fois/seconde)
+          updateInteractiveHighlight();
+        }
+        
+        if (rendererRef.current && cameraRef.current && sceneRef.current) {
+          rendererRef.current.render(sceneRef.current, cameraRef.current);
+        }
+        
+        frameCount++;
       }
+      
       animationFrameRef.current = requestAnimationFrame(animate);
     };
 
@@ -1598,6 +1683,54 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
 
     // Appel de la création des meubles après la création du laboratoire
     createLabFurniture();
+
+    // Nettoyage optimisé des ressources
+    return () => {
+      // Annuler l'animation en cours
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+
+      // Supprimer les event listeners
+      if (handleKeyDownRef.current) window.removeEventListener('keydown', handleKeyDownRef.current);
+      if (handleKeyUpRef.current) window.removeEventListener('keyup', handleKeyUpRef.current);
+      if (handleClickRef.current) window.removeEventListener('click', handleClickRef.current);
+
+      // Nettoyage du renderer
+      if (rendererRef.current && mountRef.current) {
+        try {
+          mountRef.current.removeChild(rendererRef.current.domElement);
+          rendererRef.current.dispose();
+        } catch (error) {
+          console.warn('Erreur lors du nettoyage du renderer:', error);
+        }
+      }
+
+      // Nettoyage des ressources Three.js
+      if (sceneRef.current) {
+        sceneRef.current.traverse((object) => {
+          if (object instanceof THREE.Mesh) {
+            if (object.geometry) object.geometry.dispose();
+            if (object.material) {
+              if (object.material instanceof THREE.Material) {
+                object.material.dispose();
+              } else if (Array.isArray(object.material)) {
+                object.material.forEach(material => material.dispose());
+              }
+            }
+          }
+        });
+      }
+
+      // Nettoyage des géométries et matériaux partagés
+      Object.values(sharedGeometries).forEach(geometry => geometry.dispose());
+      Object.values(sharedMaterials).forEach(material => material.dispose());
+
+      // Réinitialiser les refs
+      collisionObjectsRef.current = [];
+      isDisposedRef.current = true;
+      isInitializedRef.current = false;
+    };
   }, [initRenderer, onInteract, onUpdateGameState, handleInteraction, checkCollision]);
 
   // Gérer la soumission du code
@@ -1683,8 +1816,12 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     </>
   );
 }, (prevProps, nextProps) => {
-  // Optimisation des re-rendus
-  return true;
+  // Optimisation des re-rendus - seulement si les props importantes n'ont pas changé
+  return (
+    prevProps.periodicTableUnlocked === nextProps.periodicTableUnlocked &&
+    prevProps.onInteract === nextProps.onInteract &&
+    prevProps.onUpdateGameState === nextProps.onUpdateGameState
+  );
 });
 
 export default LaboratoireScene; 

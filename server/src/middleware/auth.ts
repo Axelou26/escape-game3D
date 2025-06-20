@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { AppError } from './errorHandler';
 import User from '../models/user.model';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'votre-secret-jwt';
+const JWT_SECRET = process.env.JWT_SECRET || 'dfrtyrer_5245_dfseFR';
 
 interface JwtPayload {
   userId: number;
