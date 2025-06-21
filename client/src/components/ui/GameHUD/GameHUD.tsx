@@ -10,8 +10,8 @@ interface GameHUDProps {
 
 export const GameHUD: React.FC<GameHUDProps> = ({ score, elapsedTime, hintsUsed, attemptsCount }) => {
   const [timeDisplay, setTimeDisplay] = useState('00:00');
-
-
+  const [prevScore, setPrevScore] = useState(score);
+  const [scoreChanged, setScoreChanged] = useState(false);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -24,11 +24,26 @@ export const GameHUD: React.FC<GameHUDProps> = ({ score, elapsedTime, hintsUsed,
     setTimeDisplay(newTimeDisplay);
   }, [elapsedTime]);
 
+  // Effet d'animation quand le score change
+  useEffect(() => {
+    if (score !== prevScore) {
+      setScoreChanged(true);
+      setPrevScore(score);
+      
+      // Retirer l'animation après 500ms
+      const timeout = setTimeout(() => {
+        setScoreChanged(false);
+      }, 500);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [score, prevScore]);
+
   return (
     <div className="game-hud">
       <div className="hud-section score">
         <div className="hud-label">Score</div>
-        <div className="hud-value">{score}</div>
+        <div className={`hud-value ${scoreChanged ? 'changed' : ''}`}>{score}</div>
       </div>
       <div className="hud-section time">
         <div className="hud-label">Temps</div>

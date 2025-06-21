@@ -588,13 +588,13 @@ export const EscapeGame: React.FC = () => {
       }, 1000); // Mise à jour chaque seconde
     };
 
-    // Synchronisation avec le serveur (moins fréquente)
+    // Synchronisation avec le serveur (moins fréquente) - CORRIGÉ pour récupérer le score avec pénalités
     const syncWithServer = async () => {
       if (isServerSyncInProgress || !isMounted) return;
       
       const now = Date.now();
-      // Éviter les syncs trop rapprochées (minimum 30 secondes entre les syncs)
-      if (lastServerSync && (now - lastServerSync) < 30000) {
+      // Éviter les syncs trop rapprochées (minimum 15 secondes entre les syncs pour permettre les pénalités)
+      if (lastServerSync && (now - lastServerSync) < 15000) {
         return;
       }
       
@@ -602,29 +602,42 @@ export const EscapeGame: React.FC = () => {
         isServerSyncInProgress = true;
         lastServerSync = now;
         
-        const response = await gameStateApi.getCurrentTime();
+        // CORRECTION : Utiliser syncTimer au lieu de getCurrentTime pour récupérer le score avec pénalités
+        const response = await gameStateApi.syncTimer(gameState.elapsedTime);
         if (response.status === 'success' && isMounted) {
-          // Corriger le temps local avec le temps serveur
+          // Corriger le temps ET le score avec les données serveur
           setGameState(prevState => {
             if (prevState.gameCompleted) return prevState;
             
             // Calculer la différence et ajuster si nécessaire
             const timeDifference = Math.abs(response.elapsedTime - prevState.elapsedTime);
             const shouldCorrect = timeDifference > 5; // Corriger si écart > 5 secondes
+            const scoreChanged = response.score !== prevState.score;
             
             if (shouldCorrect) {
               console.log(`Correction du timer local: ${prevState.elapsedTime}s -> ${response.elapsedTime}s (écart: ${timeDifference}s)`);
             }
 
+            if (scoreChanged) {
+              console.log(`Score mis à jour par le serveur: ${prevState.score} -> ${response.score}`);
+              if (response.penaltiesApplied > 0) {
+                console.log(`⏰ ${response.penaltiesApplied} pénalité(s) de temps appliquée(s) (-${response.penaltiesApplied * 10} points)`);
+                
+                // Afficher un message à l'utilisateur pour les pénalités de temps
+                setMessage(`⏰ Pénalité de temps : -${response.penaltiesApplied * 10} points (après 2 minutes d'inactivité)`);
+                setTimeout(() => setMessage(''), 4000);
+              }
+            }
+
             return {
               ...prevState,
               elapsedTime: shouldCorrect ? response.elapsedTime : prevState.elapsedTime,
-              score: prevState.score // Garder le score local
+              score: response.score // CORRECTION : Utiliser le score du serveur avec pénalités
             };
           });
 
           // Vérifier si le jeu doit se terminer
-          if (response.elapsedTime >= response.maxDuration) {
+          if (response.elapsedTime >= 3600) { // MAX_GAME_DURATION
             setGameState(prevState => ({
               ...prevState,
               gameCompleted: true
@@ -635,6 +648,19 @@ export const EscapeGame: React.FC = () => {
               navigate('/game-intro');
             }, 3000);
           }
+        } else if (response.status === 'game_ended') {
+          // Gérer la fin de partie depuis le serveur
+          setGameState(prevState => ({
+            ...prevState,
+            gameCompleted: true,
+            elapsedTime: response.elapsedTime,
+            score: response.score
+          }));
+          setMessage('Temps de jeu dépassé ! Partie terminée automatiquement.');
+          setTimeout(() => {
+            endGame();
+            navigate('/game-intro');
+          }, 3000);
         }
       } catch (error: any) {
         if (error.message?.includes('429') || error.message?.includes('Rate limit')) {
@@ -655,8 +681,8 @@ export const EscapeGame: React.FC = () => {
     // Première synchronisation avec le serveur après 3 secondes
     serverSyncTimeout = setTimeout(syncWithServer, 3000);
 
-    // Synchronisations périodiques toutes les 5 minutes
-    serverSyncInterval = setInterval(syncWithServer, 300000); // 5 minutes
+    // CORRECTION : Synchronisations plus fréquentes pour voir les pénalités de temps (toutes les 2 minutes)
+    serverSyncInterval = setInterval(syncWithServer, 120000); // 2 minutes (même intervalle que les pénalités)
 
     return () => {
       isMounted = false;
