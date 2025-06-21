@@ -14,112 +14,52 @@ export type ScoreEventType =
   | 'RIDDLE_FAILED';
 
 class ScoreService {
-  private currentScore: number = 1000;
-  private isOfflineMode: boolean = false;
+  private currentScore: number = 0;
 
-  // Mettre à jour le score avec un événement
+  // Mettre à jour le score avec un événement - TOUJOURS côté serveur
   async updateScore(eventType: ScoreEventType, details?: string): Promise<{ newScore: number; points: number }> {
     try {
-      if (this.isOfflineMode) {
-        // En mode hors-ligne, utiliser l'ancien système local
-        const localPoints = this.getLocalPoints(eventType);
-        this.currentScore = Math.max(0, this.currentScore + localPoints);
-        return { newScore: this.currentScore, points: localPoints };
-      }
-
       const result = await gameApi.addScoreEvent(eventType, details);
       this.currentScore = result.newScore;
       return { newScore: result.newScore, points: result.points };
     } catch (error) {
-      console.warn('Impossible de mettre à jour le score côté serveur, basculement en mode hors-ligne');
-      this.isOfflineMode = true;
-      
-      // Fallback vers le système local
-      const localPoints = this.getLocalPoints(eventType);
-      this.currentScore = Math.max(0, this.currentScore + localPoints);
-      return { newScore: this.currentScore, points: localPoints };
+      console.error('Erreur lors de la mise à jour du score:', error);
+      throw new Error('Impossible de mettre à jour le score. Connexion requise.');
     }
   }
 
-  // Obtenir le score actuel depuis le serveur
+  // Obtenir le score actuel depuis le serveur UNIQUEMENT
   async getCurrentScore(): Promise<{ score: number; elapsedTime: number }> {
     try {
-      if (this.isOfflineMode) {
-        return { score: this.currentScore, elapsedTime: 0 };
-      }
-
       const result = await gameApi.getCurrentScore();
       this.currentScore = result.score;
       return { score: result.score, elapsedTime: result.elapsedTime };
     } catch (error) {
-      console.warn('Impossible de récupérer le score côté serveur');
-      this.isOfflineMode = true;
-      return { score: this.currentScore, elapsedTime: 0 };
+      console.error('Erreur lors de la récupération du score:', error);
+      throw new Error('Impossible de récupérer le score. Connexion requise.');
     }
   }
 
-  // Ajouter une pénalité de temps
+  // Ajouter une pénalité de temps - TOUJOURS côté serveur
   async addTimePenalty(elapsedTime: number): Promise<{ penalty: number; newScore: number }> {
     try {
-      if (this.isOfflineMode) {
-        const penalty = this.calculateLocalTimePenalty(elapsedTime);
-        this.currentScore = Math.max(0, this.currentScore + penalty);
-        return { penalty, newScore: this.currentScore };
-      }
-
       const result = await gameApi.addTimePenalty(elapsedTime);
       this.currentScore = result.newScore;
       return { penalty: result.penalty, newScore: result.newScore };
     } catch (error) {
-      console.warn('Impossible d\'ajouter la pénalité de temps côté serveur');
-      this.isOfflineMode = true;
-      
-      const penalty = this.calculateLocalTimePenalty(elapsedTime);
-      this.currentScore = Math.max(0, this.currentScore + penalty);
-      return { penalty, newScore: this.currentScore };
+      console.error('Erreur lors de l\'ajout de la pénalité:', error);
+      throw new Error('Impossible d\'ajouter la pénalité. Connexion requise.');
     }
-  }
-
-  // Points locaux pour le mode hors-ligne (reprend l'ancien système)
-  private getLocalPoints(eventType: ScoreEventType): number {
-    const localPoints: Record<ScoreEventType, number> = {
-      ITEM_COLLECTED: 100,
-      CODE_CORRECT: 100,
-      CODE_INCORRECT: -20,
-      BEAKER_SEQUENCE_WRONG: -10,
-      BEAKER_SEQUENCE_CORRECT: 100,
-      ROOM_CHANGE: 200,
-      TIME_PENALTY: -10,
-      FINAL_CODE_CORRECT: 200,
-      FINAL_CODE_INCORRECT: -10,
-      RIDDLE_SOLVED: 100,
-      RIDDLE_FAILED: -10
-    };
-
-    return localPoints[eventType] || 0;
-  }
-
-  // Calcul local de la pénalité de temps
-  private calculateLocalTimePenalty(elapsedTimeInSeconds: number): number {
-    const twoMinutesInSeconds = 120;
-    const penaltyCount = Math.floor(elapsedTimeInSeconds / twoMinutesInSeconds);
-    return penaltyCount * -10; // -10 points toutes les 2 minutes
   }
 
   // Réinitialiser le service
   reset() {
-    this.currentScore = 1000;
-    this.isOfflineMode = false;
+    this.currentScore = 0;
   }
 
-  // Activer le mode hors-ligne
-  setOfflineMode(offline: boolean) {
-    this.isOfflineMode = offline;
-  }
-
-  // Obtenir l'état du mode hors-ligne
-  isOffline(): boolean {
-    return this.isOfflineMode;
+  // Obtenir le score local (lecture seule, pour affichage uniquement)
+  getLocalScore(): number {
+    return this.currentScore;
   }
 }
 

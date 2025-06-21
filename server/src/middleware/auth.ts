@@ -7,7 +7,13 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dfrtyrer_5245_dfseFR';
 
 interface JwtPayload {
   userId: number;
+  username: string;
+  isAdmin: boolean;
 }
+
+// Cache simple pour éviter les requêtes répétitives
+const userCache = new Map<string, { user: any; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 declare global {
   namespace Express {
@@ -26,14 +32,8 @@ export const authenticateToken = async (
   res: Response,
   next: NextFunction
 ) => {
-  console.log('🔍 Vérification du token...');
-  console.log('En-têtes reçus:', req.headers);
-  
   const authHeader = req.headers['authorization'];
-  console.log('En-tête Authorization:', authHeader);
-  
   const token = authHeader && authHeader.split(' ')[1];
-  console.log('Token extrait:', token ? `${token.substring(0, 20)}...` : 'Aucun token');
 
   if (!token) {
     return res.status(401).json({
@@ -43,12 +43,31 @@ export const authenticateToken = async (
   }
 
   try {
-    console.log('Tentative de vérification du token avec JWT_SECRET:', JWT_SECRET ? 'Secret défini' : 'Secret manquant');
+    // Vérifier le cache d'abord
+    const cachedUser = userCache.get(token);
+    if (cachedUser && Date.now() - cachedUser.timestamp < CACHE_DURATION) {
+      req.user = cachedUser.user;
+      return next();
+    }
+
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    console.log('Token décodé:', decoded);
     
+    // Si le token contient déjà les infos utilisateur (nouveau format)
+    if (decoded.username && decoded.hasOwnProperty('isAdmin')) {
+      const user = {
+        id: decoded.userId,
+        username: decoded.username,
+        isAdmin: decoded.isAdmin
+      };
+      
+      // Mettre en cache
+      userCache.set(token, { user, timestamp: Date.now() });
+      req.user = user;
+      return next();
+    }
+    
+    // Fallback pour les anciens tokens - requête DB
     const user = await User.findByPk(decoded.userId);
-    console.log('Utilisateur trouvé:', user ? 'Oui' : 'Non');
     
     if (!user) {
       return res.status(401).json({
@@ -57,13 +76,16 @@ export const authenticateToken = async (
       });
     }
 
-    req.user = {
+    const userData = {
       id: user.id,
       username: user.username,
       isAdmin: user.isAdmin
     };
+
+    // Mettre en cache
+    userCache.set(token, { user: userData, timestamp: Date.now() });
+    req.user = userData;
     
-    console.log('✅ Authentification réussie pour:', user.username);
     next();
   } catch (error) {
     console.error('❌ Erreur de vérification du token:', error);
@@ -72,4 +94,14 @@ export const authenticateToken = async (
       message: 'Token d\'authentification invalide'
     });
   }
-}; 
+};
+
+// Nettoyer le cache périodiquement
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, data] of userCache.entries()) {
+    if (now - data.timestamp > CACHE_DURATION) {
+      userCache.delete(token);
+    }
+  }
+}, CACHE_DURATION); 

@@ -1,22 +1,56 @@
-import { Router } from 'express';
+import express from 'express';
 import { scoreController } from '../controllers/score.controller';
 import { authenticateToken } from '../middleware/auth';
+import { 
+  scoreEventRateLimit, 
+  globalRateLimit,
+  suspiciousActivityDetector 
+} from '../middleware/rateLimiter';
+import { 
+  validateScoreEvent, 
+  detectDataAnomalies,
+  validateScoreIntegrity 
+} from '../middleware/dataValidation';
+import { 
+  logCheatAttempt,
+  monitorSuspiciousPatterns 
+} from '../middleware/securityLogger';
 
-const scoreRouter = Router();
+const scoreRouter = express.Router();
 
-// Toutes les routes nécessitent une authentification
+// Appliquer les middlewares de sécurité globaux
+scoreRouter.use(globalRateLimit);
+scoreRouter.use(suspiciousActivityDetector(30)); // 30 requêtes max en 5 min
+scoreRouter.use(detectDataAnomalies);
 scoreRouter.use(authenticateToken);
 
-// Ajouter un événement de score
-scoreRouter.post('/event', scoreController.addScoreEvent);
+// Route pour ajouter un événement de score
+scoreRouter.post('/event', 
+  scoreEventRateLimit,
+  validateScoreEvent,
+  validateScoreIntegrity,
+  monitorSuspiciousPatterns,
+  logCheatAttempt('SCORE_EVENT_ATTEMPT', 'LOW'),
+  scoreController.addScoreEvent
+);
 
-// Obtenir l'historique des scores
-scoreRouter.get('/history', scoreController.getScoreHistory);
+// Route pour obtenir le score actuel
+scoreRouter.get('/current', 
+  scoreController.getCurrentScore
+);
 
-// Calculer la pénalité de temps
-scoreRouter.post('/time-penalty', scoreController.addTimePenalty);
+// Route pour ajouter une pénalité de temps
+scoreRouter.post('/time-penalty',
+  scoreEventRateLimit,
+  validateScoreIntegrity,
+  monitorSuspiciousPatterns,
+  logCheatAttempt('TIME_PENALTY_ATTEMPT', 'MEDIUM'),
+  scoreController.addTimePenalty
+);
 
-// Obtenir le score actuel
-scoreRouter.get('/current', scoreController.getCurrentScore);
+// Route pour l'historique des scores
+scoreRouter.get('/history',
+  scoreController.getScoreHistory
+);
 
-export default scoreRouter; 
+export { scoreRouter }; 

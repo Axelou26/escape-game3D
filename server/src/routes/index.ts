@@ -5,7 +5,7 @@ import leaderboardRoutes from './leaderboard.routes';
 import gameStateRoutes from './game-state.routes';
 import riddleRoutes from './riddle.routes';
 import codePuzzleRoutes from './code-puzzle.routes';
-import scoreRoutes from './score.routes';
+import { scoreRouter } from './score.routes';
 
 export const setupRoutes = (app: Express) => {
   // Route racine
@@ -44,7 +44,7 @@ export const setupRoutes = (app: Express) => {
   app.use('/api/codes', codePuzzleRoutes);
 
   // Routes du scoring
-  app.use('/api/score', scoreRoutes);
+  app.use('/api/score', scoreRouter);
 
   // Route de test pour vérifier que l'API fonctionne
   app.get('/api/health', (req, res) => {

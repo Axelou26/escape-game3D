@@ -293,9 +293,7 @@ export const gameController = {
         }
       });
 
-      console.log(`🔄 Partie réinitialisée pour l'utilisateur ${req.user.id} - Inventaire vidé`);
-
-      res.json({
+          res.json({
         status: 'success',
         data: {
           gameId: newGame.id,

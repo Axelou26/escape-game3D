@@ -50,12 +50,14 @@ interface LaboratoireSceneProps {
   onInteract: (objectId: string, objectType: string, action?: string, data?: any) => void;
   onUpdateGameState: (updates: Partial<GameState>) => void;
   periodicTableUnlocked?: boolean;
+  inventory?: any[]; // Ajout de l'inventaire pour vérifier les objets existants
 }
 
 export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
   onInteract,
   onUpdateGameState,
-  periodicTableUnlocked = false
+  periodicTableUnlocked = false,
+  inventory = []
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<PointerLockControls | null>(null);
@@ -364,22 +366,28 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
             if (!periodicTableStateRef.current.globalUnlocked && !periodicTableUnlocked) {
               onInteract('periodic-table-locked', 'message', 'examine', 'Ce tableau semble verrouillé, il y a peut-être quelque chose à faire avec les béchers.');
             } else {
-              // Le tableau est déverrouillé - vérifier si l'énigme a été collectée
-              if (!periodicTableStateRef.current.riddleCollected) {
-                // Récupérer l'énigme depuis l'API et l'ajouter à l'inventaire
+              // CORRECTION: Vérifier d'abord dans l'inventaire actuel si l'énigme existe déjà
+              const currentInventory = inventory || [];
+              const riddleAlreadyExists = currentInventory.some(item => 
+                (typeof item === 'string' ? item : item.id) === 'riddle-elements'
+              );
+              
+              if (!riddleAlreadyExists && !periodicTableStateRef.current.riddleCollected) {
+                // L'énigme n'existe pas dans l'inventaire ET n'a pas été marquée comme collectée localement
                 onInteract('riddle-elements', 'riddle', 'add_to_inventory', { riddleId: 'riddle-elements' });
                 
                 // Message de confirmation
                 onInteract('periodic-table-message', 'message', 'examine', 'Une énigme mystérieuse est apparue sur le tableau périodique ! Elle a été ajoutée à votre inventaire.');
                 
-                // Marquer l'énigme comme récupérée
+                // Marquer l'énigme comme récupérée localement
                 periodicTableStateRef.current = {
                   isLocked: false,
                   globalUnlocked: true,
                   riddleCollected: true
                 };
               } else {
-                onInteract(object.userData.id, 'message', 'examine', 'Vous avez déjà récupéré l\'énigme du tableau périodique.');
+                // L'énigme existe déjà ou a été marquée comme collectée
+                onInteract('periodic-table-message', 'message', 'examine', 'Vous avez déjà récupéré l\'énigme du tableau périodique.');
               }
             }
             break;
@@ -1674,7 +1682,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       // Mur droit
       createFumeHood(new THREE.Vector3(9.7, 1, -5), -Math.PI / 2);
       createWorkbench(new THREE.Vector3(9.7, 0.45, 0), -Math.PI / 2);
-      createEquipmentShelf(new THREE.Vector3(9.7, 1, 5), -Math.PI / 2);
+      createEquipmentShelf(new THREE.Vector3(9.7, 1, 5), Math.PI / 2);
 
       // Mur du fond
       createWorkbench(new THREE.Vector3(-3, 0.45, 9.7), Math.PI);
@@ -1736,7 +1744,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
   // Gérer la soumission du code
   const handleCodeSubmit = useCallback(async (code: string) => {
     try {
-      // Valider le code via l'API
+      // Valider le code via l'API - le serveur gère les tentatives
       const validationResult = await gameApi.validateCode('computer-code', code);
 
       if (validationResult.correct) {
@@ -1757,21 +1765,17 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
           onInteract('computer-message', 'notification', 'display', 'Le casier sécurisé est maintenant déverrouillé ! Vous pouvez maintenant l\'examiner pour découvrir ce qu\'il cache.');
         }, 2000);
       } else {
-        // Donner les points pour le code incorrect
+        // Donner les points pour le code incorrect - le serveur gère les pénalités
         onInteract('computer-code', 'security', 'enterCode', { isCorrect: false });
         
-        labStateRef.current.computerAttempts++;
-        if (labStateRef.current.computerAttempts >= 3) {
-          onInteract('computer-message', 'notification', 'display', 'ATTENTION: Trop de tentatives incorrectes. Indice: Regardez l\'énigme du tableau périodique.');
-          labStateRef.current.computerAttempts = 0;
-        } else {
-          setCodeErrorMessage('Code incorrect');
-          setTimeout(() => setCodeErrorMessage(''), 3000);
-        }
+        // Afficher le message d'erreur du serveur s'il existe
+        const errorMessage = validationResult.message || 'Code incorrect';
+        setCodeErrorMessage(errorMessage);
+        setTimeout(() => setCodeErrorMessage(''), 3000);
       }
     } catch (error) {
       console.error('Erreur lors de la validation du code:', error);
-      setCodeErrorMessage('Erreur de connexion');
+      setCodeErrorMessage('Erreur de connexion - Connexion serveur requise');
       setTimeout(() => setCodeErrorMessage(''), 3000);
     }
     setShowCodeInput(false);

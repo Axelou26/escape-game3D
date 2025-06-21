@@ -4,6 +4,10 @@ import Game from '../models/game.model';
 import ScoreEvent from '../models/score-event.model';
 import { GAME_CONFIG } from '../config/gameConfig';
 
+// Cache pour limiter les requêtes fréquentes du même utilisateur
+const lastRequestTime = new Map<number, number>();
+const REQUEST_COOLDOWN = 10000; // 10 secondes minimum entre les requêtes du même utilisateur (réduit de 30s)
+
 export const timerController = {
   // Synchroniser le timer avec le serveur
   async syncTimer(req: Request, res: Response) {
@@ -11,6 +15,20 @@ export const timerController = {
       if (!req.user?.id) {
         throw new AppError(401, 'Non authentifié');
       }
+
+      // PROTECTION: Vérifier si l'utilisateur fait trop de requêtes
+      const userId = req.user.id;
+      const now = Date.now();
+      const lastRequest = lastRequestTime.get(userId);
+      
+      if (lastRequest && (now - lastRequest) < REQUEST_COOLDOWN) {
+        return res.status(429).json({
+          status: 'error',
+          message: 'Trop de requêtes. Veuillez patienter.'
+        });
+      }
+      
+      lastRequestTime.set(userId, now);
 
       const { clientElapsedTime } = req.body;
 
@@ -117,6 +135,20 @@ export const timerController = {
       if (!req.user?.id) {
         throw new AppError(401, 'Non authentifié');
       }
+
+      // PROTECTION: Vérifier si l'utilisateur fait trop de requêtes
+      const userId = req.user.id;
+      const now = Date.now();
+      const lastRequest = lastRequestTime.get(userId);
+      
+      if (lastRequest && (now - lastRequest) < REQUEST_COOLDOWN) {
+        return res.status(429).json({
+          status: 'error',
+          message: 'Trop de requêtes. Veuillez patienter.'
+        });
+      }
+      
+      lastRequestTime.set(userId, now);
 
       const game = await Game.findOne({
         where: { userId: req.user.id, isCompleted: false }

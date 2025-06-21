@@ -9,28 +9,14 @@ import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 
 const IntroContainer = styled(Container)(({ theme }) => ({
   minHeight: '100vh',
-  height: '100%',
   display: 'flex',
   flexDirection: 'column',
-  justifyContent: 'flex-start',
+  justifyContent: 'center',
   alignItems: 'center',
-  background: 'radial-gradient(circle at center, #1a1a1a 0%, #000000 100%)',
   position: 'relative',
-  overflowY: 'auto',
+  zIndex: 1,
   padding: theme.spacing(4),
   paddingBottom: theme.spacing(8),
-  '&::before': {
-    content: '""',
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    background: 'url("/path/to/texture.png")',
-    opacity: 0.1,
-    pointerEvents: 'none',
-    zIndex: 0,
-  }
 }));
 
 const GamePanel = styled(Paper)(({ theme }) => ({
@@ -135,9 +121,16 @@ export const GameIntro: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           setHasSavedGame(!!data.data);
+        } else if (response.status === 404) {
+          // Pas de partie en cours - c'est normal
+          setHasSavedGame(false);
+        } else {
+          console.warn('Erreur lors de la vérification de la sauvegarde:', response.status);
+          setHasSavedGame(false);
         }
       } catch (error) {
         console.error('Erreur lors de la vérification de la sauvegarde:', error);
+        setHasSavedGame(false);
       }
     };
 

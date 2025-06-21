@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { gameStateController } from '../controllers/game-state.controller';
 import { timerController } from '../controllers/timer.controller';
+import { strictTimerRateLimit } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -22,9 +23,9 @@ router.post('/room/change', gameStateController.changeRoom);
 // Gestion de la progression
 router.post('/progress/update', gameStateController.updateGameProgress);
 
-// Gestion du timer
-router.post('/timer/sync', timerController.syncTimer);
-router.get('/timer/current', timerController.getCurrentTime);
+// Gestion du timer avec rate limiting strict
+router.post('/timer/sync', strictTimerRateLimit, timerController.syncTimer);
+router.get('/timer/current', strictTimerRateLimit, timerController.getCurrentTime);
 router.post('/timer/pause', timerController.pauseGame);
 
 export default router; 

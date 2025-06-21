@@ -1427,7 +1427,6 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
   useEffect(() => {
     // Ce useEffect ne fait que réagir aux changements de isCodeValid
     // La logique de la porte est déjà gérée dans handleInteraction
-    console.log('Code validation status changed:', isCodeValid);
   }, [isCodeValid]);
 
   return (

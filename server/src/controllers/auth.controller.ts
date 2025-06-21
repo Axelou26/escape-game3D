@@ -12,7 +12,6 @@ export const register = async (
   next: NextFunction
 ) => {
   try {
-    console.log('Données reçues dans register:', req.body);
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -32,9 +31,13 @@ export const register = async (
       isAdmin: false
     });
 
-    // Générer le token JWT
+    // Générer le token JWT avec toutes les infos utilisateur
     const token = jwt.sign(
-      { userId: user.id },
+      { 
+        userId: user.id,
+        username: user.username,
+        isAdmin: user.isAdmin
+      },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -57,7 +60,6 @@ export const login = async (
   next: NextFunction
 ) => {
   try {
-    console.log('Données reçues dans login:', req.body);
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -76,9 +78,13 @@ export const login = async (
       throw new AppError(401, 'Nom d\'utilisateur ou mot de passe incorrect');
     }
 
-    // Générer le token JWT
+    // Générer le token JWT avec toutes les infos utilisateur
     const token = jwt.sign(
-      { userId: user.id },
+      { 
+        userId: user.id,
+        username: user.username,
+        isAdmin: user.isAdmin
+      },
       JWT_SECRET,
       { expiresIn: '24h' }
     );

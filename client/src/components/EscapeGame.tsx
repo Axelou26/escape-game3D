@@ -42,71 +42,31 @@ export const EscapeGame: React.FC = () => {
     artifactUnlocked: false
   });
 
-  // Protection contre la perte accidentelle d'inventaire
-  const [allowInventoryReset, setAllowInventoryReset] = useState(false);
-  
-  const protectedSetGameState = useCallback((newState: GameState | ((prevState: GameState) => GameState)) => {
-    if (typeof newState === 'function') {
-      setGameState(prevState => {
-        const computedState = newState(prevState);
-        // Vérifier si l'inventaire est en train d'être vidé accidentellement (sauf si explicitement autorisé)
-        if (!allowInventoryReset && prevState.inventory.length > 0 && computedState.inventory.length === 0) {
-          console.warn('🚨 PROTECTION: Tentative de vider l\'inventaire via setGameState détectée!');
-          console.warn('Inventaire actuel:', prevState.inventory);
-          console.warn('Nouvel état proposé:', computedState);
-          // Conserver l'inventaire existant
-          return { ...computedState, inventory: prevState.inventory };
-        }
-        return computedState;
-      });
-    } else {
-      setGameState(prevState => {
-        // Vérifier si l'inventaire est en train d'être vidé accidentellement (sauf si explicitement autorisé)
-        if (!allowInventoryReset && prevState.inventory.length > 0 && newState.inventory.length === 0) {
-          console.warn('🚨 PROTECTION: Tentative de vider l\'inventaire via setGameState détectée!');
-          console.warn('Inventaire actuel:', prevState.inventory);
-          console.warn('Nouvel état proposé:', newState);
-          // Conserver l'inventaire existant
-          return { ...newState, inventory: prevState.inventory };
-        }
-        return newState;
-      });
-    }
-  }, [allowInventoryReset]);
-
+  const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [showPauseMenu, setShowPauseMenu] = useState(false);
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [currentCodeType, setCurrentCodeType] = useState<'drawer' | 'painting'>('drawer');
-  const [message, setMessage] = useState<string>('');
-  const [codeErrorMessage, setCodeErrorMessage] = useState<string>('');
+  const [codeErrorMessage, setCodeErrorMessage] = useState('');
   const [showBook, setShowBook] = useState(false);
-  const [showRiddle, setShowRiddle] = useState(false);
-  const [currentRiddle, setCurrentRiddle] = useState<InventoryItem | undefined>();
+  const [currentBookContent, setCurrentBookContent] = useState<any>(null);
+  const [showRiddleContent, setShowRiddleContent] = useState(false);
+  const [currentRiddleContent, setCurrentRiddleContent] = useState<any>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isOfflineMode, setIsOfflineMode] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [showPauseMenu, setShowPauseMenu] = useState(false);
-
   const [selectedRiddle, setSelectedRiddle] = useState<string | null>(null);
-  // État pour savoir si le code du tableau a été validé
   const [isPaintingCodeValid, setIsPaintingCodeValid] = useState(false);
 
-  // Mettre à jour isPaintingCodeValid quand l'inventaire change
-  useEffect(() => {
-    const hasKey = gameState.inventory.some(item => item.id === 'laboratory-key');
-    setIsPaintingCodeValid(hasKey);
-  }, [gameState.inventory]);
+  // SUPPRESSION DU MODE OFFLINE - Connexion serveur OBLIGATOIRE
+  const [connectionError, setConnectionError] = useState(false);
 
-  // Définition des fonctions de base
+  // Définition des fonctions de base - TOUJOURS en ligne
   const saveGameState = useCallback(async (newState: GameState) => {
-    if (isOfflineMode) return;
-
     const token = localStorage.getItem('token');
     if (!token) {
-      setIsOfflineMode(true);
-      setMessage('Mode hors-ligne activé');
-      setTimeout(() => setMessage(''), 3000);
+      setConnectionError(true);
+      setError('Token d\'authentification manquant - Reconnexion requise');
+      setTimeout(() => navigate('/login'), 3000);
       return;
     }
 
@@ -116,7 +76,7 @@ export const EscapeGame: React.FC = () => {
       gameState: {
         currentRoom: newState.currentRoom,
         inventory: Array.isArray(newState.inventory) ? newState.inventory : [],
-        score: typeof newState.score === 'number' ? newState.score : 1000,
+        score: typeof newState.score === 'number' ? newState.score : 0,
         elapsedTime: typeof newState.elapsedTime === 'number' ? newState.elapsedTime : 0,
         microscopeEnigmeResolved: newState.microscopeEnigmeResolved || false,
         periodicTableUnlocked: newState.periodicTableUnlocked || false,
@@ -143,23 +103,21 @@ export const EscapeGame: React.FC = () => {
 
       const data = await response.json();
       if (data.status === 'success') {
-        setTimeout(() => setMessage(''), 2000);
+        setConnectionError(false);
       }
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
-      setIsOfflineMode(true);
-      setMessage('Mode hors-ligne activé. La progression ne sera pas sauvegardée.');
-      setTimeout(() => setMessage(''), 3000);
+      setConnectionError(true);
+      setError('Erreur de connexion - Impossible de sauvegarder');
     }
-  }, [isOfflineMode]);
+  }, [navigate]);
 
-  // Fonction pour terminer le jeu et sauvegarder le score final
+  // Fonction pour terminer le jeu - TOUJOURS en ligne
   const endGame = useCallback(async () => {
-    if (isOfflineMode) return;
-
     const token = localStorage.getItem('token');
     if (!token) {
       console.error('Pas de token pour terminer le jeu');
+      setError('Authentification requise');
       return;
     }
 
@@ -185,35 +143,30 @@ export const EscapeGame: React.FC = () => {
       
     } catch (error) {
       console.error('Erreur lors de la fin du jeu:', error);
+      setError('Erreur lors de la finalisation du jeu');
     }
-  }, [isOfflineMode, gameState]);
+  }, [gameState]);
 
   const updateGameState = useCallback((updates: Partial<GameState>, isReset = false) => {
     setGameState(prevState => {
-      // PROTECTION: Empêcher la perte accidentelle d'inventaire (sauf lors d'un reset)
+      // Protection contre la corruption d'inventaire
       if (!isReset && updates.inventory !== undefined && prevState.inventory.length > 0 && updates.inventory.length === 0) {
         console.warn('🚨 PROTECTION: Tentative de vider l\'inventaire détectée et bloquée!');
-        console.warn('Inventaire actuel:', prevState.inventory);
-        console.warn('Tentative de mise à jour:', updates);
-        // Ne pas appliquer la mise à jour qui viderait l'inventaire
         const safeUpdates = { ...updates };
         delete safeUpdates.inventory;
         return { ...prevState, ...safeUpdates };
       }
       
       const newState = { ...prevState, ...updates };
-      // Nettoyer l'inventaire si il a été modifié
-      if (updates.inventory) {
-                  // Inventaire nettoyé automatiquement par le service
-      }
-      if (!isOfflineMode) {
-        saveGameState(newState).catch(console.error);
-      }
+      
+      // Sauvegarder immédiatement - connexion obligatoire
+      saveGameState(newState).catch(console.error);
+      
       return newState;
     });
-  }, [isOfflineMode, saveGameState]);
+  }, [saveGameState]);
 
-  // Mettre à jour le score en fonction des événements
+  // Mettre à jour le score - TOUJOURS côté serveur
   const handleScoreUpdate = useCallback(async (event: ScoreEventType, details?: string) => {
     try {
       const result = await scoreService.updateScore(event, details);
@@ -222,7 +175,6 @@ export const EscapeGame: React.FC = () => {
         score: result.newScore
       }));
       
-      // Afficher un message si points gagnés/perdus
       if (result.points !== 0) {
         const message = result.points > 0 
           ? `+${result.points} points !` 
@@ -231,7 +183,8 @@ export const EscapeGame: React.FC = () => {
       }
     } catch (error) {
       console.error('Erreur lors de la mise à jour du score:', error);
-      // Le scoreService gère déjà le fallback en mode hors-ligne
+      setConnectionError(true);
+      setError('Erreur de score - Connexion serveur requise');
     }
   }, []);
 
@@ -340,7 +293,29 @@ export const EscapeGame: React.FC = () => {
           let itemDescription: string;
           let itemContent: any = undefined;
 
-          if (objectType === 'riddle' && data?.riddleId) {
+          // CORRECTION: Simplification comme dans la bibliothèque avec fallback
+          if (objectId === 'riddle-elements') {
+            try {
+              // Récupérer l'énigme depuis l'API
+              const riddleData = await gameApi.getRiddleContent('riddle-elements');
+              itemId = 'riddle-elements';
+              itemType = 'riddle';
+              itemName = riddleData.name;
+              itemDescription = 'Une énigme mystérieuse apparue sur le tableau périodique...';
+              itemContent = riddleData.content;
+            } catch (error) {
+              // Fallback si l'API ne répond pas
+              itemId = 'riddle-elements';
+              itemType = 'riddle';
+              itemName = 'Énigme des Éléments';
+              itemDescription = 'Une énigme mystérieuse apparue sur le tableau périodique...';
+              itemContent = {
+                riddle: "Une énigme sur les éléments chimiques...",
+                answer: "OHN",
+                hint: "Oxygène, Hydrogène, et un métal précieux..."
+              };
+            }
+          } else if (objectType === 'riddle' && data?.riddleId) {
             // Récupérer l'énigme depuis l'API
             const riddleData = await gameApi.getRiddleContent(data.riddleId);
             itemId = data.riddleId;
@@ -384,10 +359,17 @@ export const EscapeGame: React.FC = () => {
           } else {
             // Objet générique
             itemId = data?.id || `item-${Date.now()}`;
-            itemType = objectType;
+            itemType = objectType || 'item';
             itemName = data?.name || 'Objet mystérieux';
             itemDescription = data?.description || 'Un objet intriguant...';
             itemContent = data?.content;
+          }
+
+          // Validation côté client avant l'envoi
+          if (!itemId || !itemType || !itemName) {
+            setMessage('Erreur: données d\'objet invalides');
+            setTimeout(() => setMessage(''), 3000);
+            break;
           }
 
           // Ajouter l'objet via le service sécurisé
@@ -403,7 +385,6 @@ export const EscapeGame: React.FC = () => {
           setMessage(`${itemName} ajouté à l'inventaire !`);
           setTimeout(() => setMessage(''), 3000);
         } catch (error) {
-          console.error('Erreur lors de l\'ajout à l\'inventaire:', error);
           setMessage('Erreur lors de l\'ajout à l\'inventaire');
           setTimeout(() => setMessage(''), 3000);
         }
@@ -456,7 +437,6 @@ export const EscapeGame: React.FC = () => {
           setMessage(`${keyName} ajoutée à l'inventaire !`);
           setTimeout(() => setMessage(''), 3000);
         } catch (error) {
-          console.error('Erreur lors de l\'ajout de la clé:', error);
           setMessage('Erreur lors de l\'ajout de la clé');
           setTimeout(() => setMessage(''), 3000);
         }
@@ -507,7 +487,7 @@ export const EscapeGame: React.FC = () => {
         }
         break;
     }
-  }, [gameState, isTransitioning, isOfflineMode, saveGameState, handleScoreUpdate]);
+  }, [gameState, isTransitioning, handleScoreUpdate]);
 
   // Initialisation du jeu
   useEffect(() => {
@@ -566,7 +546,6 @@ export const EscapeGame: React.FC = () => {
         if (isMounted) {
           console.error('Erreur lors de l\'initialisation:', error);
           setError('Erreur lors du chargement du jeu');
-          setIsOfflineMode(true);
         }
       } finally {
         if (isMounted) {
@@ -582,23 +561,64 @@ export const EscapeGame: React.FC = () => {
     };
   }, []);
 
-  // Timer géré uniquement côté serveur
+  // Timer hybride : local pour l'affichage temps réel + synchronisation périodique serveur
   useEffect(() => {
     if (isLoading || gameState.gameCompleted) return;
 
-    const fetchServerTime = async () => {
+    let localTimerInterval: NodeJS.Timeout;
+    let serverSyncInterval: NodeJS.Timeout;
+    let serverSyncTimeout: NodeJS.Timeout;
+    let isServerSyncInProgress = false;
+    let isMounted = true; 
+    let lastServerSync = 0; // Timestamp de la dernière sync serveur
+
+    // Timer local qui s'incrémente chaque seconde pour l'affichage temps réel
+    const startLocalTimer = () => {
+      localTimerInterval = setInterval(() => {
+        if (!isMounted) return;
+        
+        setGameState(prevState => {
+          if (prevState.gameCompleted) return prevState;
+          
+          return {
+            ...prevState,
+            elapsedTime: prevState.elapsedTime + 1
+          };
+        });
+      }, 1000); // Mise à jour chaque seconde
+    };
+
+    // Synchronisation avec le serveur (moins fréquente)
+    const syncWithServer = async () => {
+      if (isServerSyncInProgress || !isMounted) return;
+      
+      const now = Date.now();
+      // Éviter les syncs trop rapprochées (minimum 30 secondes entre les syncs)
+      if (lastServerSync && (now - lastServerSync) < 30000) {
+        return;
+      }
+      
       try {
+        isServerSyncInProgress = true;
+        lastServerSync = now;
+        
         const response = await gameStateApi.getCurrentTime();
-        if (response.status === 'success') {
+        if (response.status === 'success' && isMounted) {
+          // Corriger le temps local avec le temps serveur
           setGameState(prevState => {
-            if (prevState.gameCompleted) {
-              return prevState;
+            if (prevState.gameCompleted) return prevState;
+            
+            // Calculer la différence et ajuster si nécessaire
+            const timeDifference = Math.abs(response.elapsedTime - prevState.elapsedTime);
+            const shouldCorrect = timeDifference > 5; // Corriger si écart > 5 secondes
+            
+            if (shouldCorrect) {
+              console.log(`Correction du timer local: ${prevState.elapsedTime}s -> ${response.elapsedTime}s (écart: ${timeDifference}s)`);
             }
 
-            // Mettre à jour avec le temps du serveur
             return {
               ...prevState,
-              elapsedTime: response.elapsedTime,
+              elapsedTime: shouldCorrect ? response.elapsedTime : prevState.elapsedTime,
               score: prevState.score // Garder le score local
             };
           });
@@ -616,32 +636,46 @@ export const EscapeGame: React.FC = () => {
             }, 3000);
           }
         }
-      } catch (error) {
-        console.error('Erreur lors de la récupération du temps:', error);
+      } catch (error: any) {
+        if (error.message?.includes('429') || error.message?.includes('Rate limit')) {
+          console.warn('Rate limit atteint, prochaine sync différée');
+          // Différer la prochaine sync en cas de rate limit
+          lastServerSync = now + 60000; // Reporter de 1 minute
+        } else {
+          console.error('Erreur sync serveur:', error);
+        }
+      } finally {
+        isServerSyncInProgress = false;
       }
     };
 
-    // Récupérer le temps immédiatement
-    fetchServerTime();
+    // Démarrer le timer local immédiatement
+    startLocalTimer();
 
-    // Puis toutes les secondes
-    const intervalId = setInterval(fetchServerTime, 1000);
+    // Première synchronisation avec le serveur après 3 secondes
+    serverSyncTimeout = setTimeout(syncWithServer, 3000);
+
+    // Synchronisations périodiques toutes les 5 minutes
+    serverSyncInterval = setInterval(syncWithServer, 300000); // 5 minutes
 
     return () => {
-      clearInterval(intervalId);
+      isMounted = false;
+      clearInterval(localTimerInterval);
+      clearInterval(serverSyncInterval);
+      clearTimeout(serverSyncTimeout);
     };
   }, [isLoading, gameState.gameCompleted, endGame, navigate]);
 
   // Sauvegarde automatique optimisée avec debounce plus long
   useEffect(() => {
-    if (!isOfflineMode && !isLoading) {
+    if (!isLoading && !gameState.gameCompleted) {
       const timeoutId = setTimeout(() => {
         saveGameState(gameState).catch(console.error);
-      }, 2000); // Augmenté à 2 secondes pour réduire la fréquence
+      }, 5000); // Augmenté à 5 secondes pour réduire la fréquence
 
       return () => clearTimeout(timeoutId);
     }
-  }, [gameState.score, isOfflineMode, isLoading, saveGameState]); // Suppression d'elapsedTime pour éviter trop de sauvegardes
+  }, [gameState.score, gameState.currentRoom, isLoading, saveGameState]); // Suppression d'elapsedTime et ajout de conditions plus restrictives
 
   const handleCodeSubmit = useCallback(async (code: string) => {
     try {
@@ -713,8 +747,8 @@ export const EscapeGame: React.FC = () => {
         break;
       case 'drawer-riddle':
       case 'periodic-table-elements-riddle':
-        setCurrentRiddle(item);
-        setShowRiddle(true);
+        setCurrentRiddleContent(item);
+        setShowRiddleContent(true);
         break;
       case 'laboratory-key':
         if (gameState.currentRoom === 'library') {
@@ -823,26 +857,8 @@ export const EscapeGame: React.FC = () => {
 
       const data = await response.json();
       if (data.status === 'success') {
-        // Autoriser temporairement la réinitialisation de l'inventaire
-        setAllowInventoryReset(true);
-        
-        // Réinitialiser complètement l'inventaire service
-        inventoryService.resetInventory();
-        
         // Réinitialiser l'état principal du jeu
         setGameState(data.data.gameState);
-        
-        // Nettoyer également le localStorage pour l'inventaire
-        const gameStateFromStorage = localStorage.getItem('gameState');
-        if (gameStateFromStorage) {
-          try {
-            const parsedState = JSON.parse(gameStateFromStorage);
-            parsedState.inventory = [];
-            localStorage.setItem('gameState', JSON.stringify(parsedState));
-          } catch (error) {
-            console.error('Erreur lors du nettoyage du localStorage:', error);
-          }
-        }
         
         // Nettoyer complètement le localStorage
         localStorage.removeItem('gameState');
@@ -854,25 +870,11 @@ export const EscapeGame: React.FC = () => {
         setMessage('Partie réinitialisée avec succès');
         setCodeErrorMessage('');
         setShowBook(false);
-        setShowRiddle(false);
-        setCurrentRiddle(undefined);
+        setShowRiddleContent(false);
+        setCurrentRiddleContent(null);
         setIsTransitioning(false);
         setSelectedRiddle(null);
         setIsPaintingCodeValid(false);
-        
-        // Désactiver l'autorisation de réinitialisation et synchroniser l'inventaire
-        setTimeout(async () => {
-          setAllowInventoryReset(false);
-          setMessage('');
-          // Synchroniser le service d'inventaire avec le nouvel état
-          try {
-            await inventoryService.syncWithServer();
-          } catch (error) {
-            console.error('Erreur lors de la synchronisation de l\'inventaire:', error);
-          }
-        }, 3000);
-        
-        console.log('🔄 Réinitialisation complète terminée - Inventaire:', data.data.gameState.inventory);
       } else {
         throw new Error(data.message || 'Erreur lors de la réinitialisation du jeu');
       }
@@ -896,11 +898,11 @@ export const EscapeGame: React.FC = () => {
     if (item.type === 'riddle') {
       try {
         const riddleContent = await gameApi.getRiddleContent(item.id);
-        setCurrentRiddle({
+        setCurrentRiddleContent({
           ...item,
           content: riddleContent.content
         });
-        setShowRiddle(true);
+        setShowRiddleContent(true);
         setSelectedRiddle(item.id);
       } catch (error) {
         console.error('Erreur lors du chargement de l\'énigme:', error);
@@ -936,7 +938,7 @@ export const EscapeGame: React.FC = () => {
   }, []);
 
   const handleCodeFeedback = useCallback((isCorrect: boolean) => {
-            setGameState(prev => ({ ...prev, attemptsCount: prev.attemptsCount + 1 }));
+    setGameState(prev => ({ ...prev, attemptsCount: prev.attemptsCount + 1 }));
     if (isCorrect) {
       setMessage('Code correct !');
       setShowCodeInput(false);
@@ -971,7 +973,7 @@ export const EscapeGame: React.FC = () => {
       ) : error ? (
         <div className="error-overlay">
           <div>{error}</div>
-          <button onClick={() => setError(null)}>Réessayer</button>
+          <button onClick={() => setError('')}>Réessayer</button>
         </div>
       ) : (
         <>
@@ -991,6 +993,7 @@ export const EscapeGame: React.FC = () => {
                 onInteract={handleInteract}
                 onUpdateGameState={updateGameState}
                 periodicTableUnlocked={gameState.periodicTableUnlocked}
+                inventory={gameState.inventory}
               />
             )}
             {gameState.currentRoom === 'secret-chamber' && (
@@ -1111,13 +1114,13 @@ export const EscapeGame: React.FC = () => {
             <BookContent onClose={() => setShowBook(false)} />
           )}
 
-          {showRiddle && !isTransitioning && (
+          {showRiddleContent && !isTransitioning && (
             <RiddleContent 
               onClose={() => {
-                setShowRiddle(false);
-                setCurrentRiddle(undefined);
+                setShowRiddleContent(false);
+                setCurrentRiddleContent(null);
               }}
-              riddle={currentRiddle}
+              riddle={currentRiddleContent}
             />
           )}
 

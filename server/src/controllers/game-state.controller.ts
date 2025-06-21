@@ -25,6 +25,19 @@ interface GameStateData {
   artifactUnlocked?: boolean;
 }
 
+// Utilitaire pour traiter le contenu JSON de manière sécurisée
+const parseItemContent = (itemContent: any): any => {
+  if (!itemContent) return undefined;
+  if (typeof itemContent === 'string') {
+    try {
+      return JSON.parse(itemContent);
+    } catch (error) {
+      return itemContent;
+    }
+  }
+  return itemContent;
+};
+
 export const gameStateController = {
   // Valider l'ajout d'un objet à l'inventaire
   async addToInventory(req: Request, res: Response) {
@@ -39,7 +52,7 @@ export const gameStateController = {
       if (!itemId || !itemType || !itemName) {
         return res.status(400).json({ 
           status: 'error', 
-          message: 'itemId, itemType et itemName sont requis' 
+          message: 'Paramètres manquants (itemId, itemType, itemName requis)'
         });
       }
 
@@ -50,9 +63,25 @@ export const gameStateController = {
       );
 
       if ((existing as any[]).length > 0) {
-        return res.status(400).json({ 
-          status: 'error', 
-          message: 'Cet objet est déjà dans l\'inventaire' 
+        // Au lieu d'une erreur, renvoyer l'inventaire actuel
+        const [rows] = await db.execute(
+          'SELECT item_id, item_type, item_name, item_description, item_content FROM inventory WHERE user_id = ? ORDER BY created_at ASC',
+          [userId]
+        );
+
+        const inventory = (rows as any[]).map(row => ({
+          id: row.item_id,
+          type: row.item_type,
+          name: row.item_name,
+          description: row.item_description,
+          content: parseItemContent(row.item_content)
+        }));
+
+        return res.status(409).json({
+          status: 'warning',
+          message: `Cet objet (${itemId}) est déjà dans l'inventaire`,
+          inventory,
+          alreadyExists: true
         });
       }
 
@@ -66,11 +95,11 @@ export const gameStateController = {
       if (currentCount >= 20) {
         return res.status(400).json({ 
           status: 'error', 
-          message: 'Inventaire plein (maximum 20 objets)' 
+          message: `Inventaire plein (${currentCount}/20 objets)`
         });
       }
 
-      // Ajouter l'objet
+      // Ajouter l'objet à l'inventaire
       await db.execute(
         'INSERT INTO inventory (user_id, item_id, item_type, item_name, item_description, item_content) VALUES (?, ?, ?, ?, ?, ?)',
         [userId, itemId, itemType, itemName, itemDescription, itemContent ? JSON.stringify(itemContent) : null]
@@ -87,7 +116,7 @@ export const gameStateController = {
         type: row.item_type,
         name: row.item_name,
         description: row.item_description,
-        content: row.item_content ? JSON.parse(row.item_content) : undefined
+        content: parseItemContent(row.item_content)
       }));
 
       const newItem = {
@@ -105,7 +134,10 @@ export const gameStateController = {
       });
     } catch (error) {
       console.error('Erreur addToInventory:', error);
-      res.status(500).json({ status: 'error', message: 'Erreur serveur' });
+      res.status(500).json({ 
+        status: 'error', 
+        message: 'Erreur serveur'
+      });
     }
   },
 
@@ -268,7 +300,7 @@ export const gameStateController = {
         type: row.item_type,
         name: row.item_name,
         description: row.item_description,
-        content: row.item_content ? JSON.parse(row.item_content) : undefined
+        content: parseItemContent(row.item_content)
       }));
 
       res.json({
@@ -277,7 +309,7 @@ export const gameStateController = {
       });
     } catch (error) {
       console.error('Erreur getInventory:', error);
-      res.status(500).json({ status: 'error', message: 'Erreur serveur' });
+      res.status(500).json({ status: 'error', message: 'Erreur lors de la récupération de l\'inventaire' });
     }
   },
 
@@ -289,27 +321,16 @@ export const gameStateController = {
         return res.status(401).json({ status: 'error', message: 'Utilisateur non authentifié' });
       }
 
-      const { itemId } = req.params;
+      const { itemId } = req.body;
 
       if (!itemId) {
-        return res.status(400).json({ 
-          status: 'error', 
-          message: 'itemId est requis' 
-        });
+        return res.status(400).json({ status: 'error', message: 'itemId manquant' });
       }
 
-      // Supprimer l'objet
-      const [result] = await db.execute(
+      await db.execute(
         'DELETE FROM inventory WHERE user_id = ? AND item_id = ?',
         [userId, itemId]
       );
-
-      if ((result as any).affectedRows === 0) {
-        return res.status(404).json({ 
-          status: 'error', 
-          message: 'Objet non trouvé dans l\'inventaire' 
-        });
-      }
 
       // Récupérer l'inventaire mis à jour
       const [rows] = await db.execute(
@@ -322,7 +343,7 @@ export const gameStateController = {
         type: row.item_type,
         name: row.item_name,
         description: row.item_description,
-        content: row.item_content ? JSON.parse(row.item_content) : undefined
+        content: parseItemContent(row.item_content)
       }));
 
       res.json({
@@ -331,7 +352,7 @@ export const gameStateController = {
       });
     } catch (error) {
       console.error('Erreur removeFromInventory:', error);
-      res.status(500).json({ status: 'error', message: 'Erreur serveur' });
+      res.status(500).json({ status: 'error', message: 'Erreur lors de la suppression de l\'inventaire' });
     }
   },
 

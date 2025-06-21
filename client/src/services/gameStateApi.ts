@@ -76,7 +76,7 @@ class GameStateApiService {
     itemDescription: string,
     itemContent?: any
   ): Promise<{ inventory: InventoryItem[]; newItem: InventoryItem }> {
-    try {
+        try {
       const response = await fetch(`${API_URL}/game-state/inventory/add`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
@@ -103,7 +103,6 @@ class GameStateApiService {
         throw new Error(data.message || 'Erreur lors de l\'ajout à l\'inventaire');
       }
     } catch (error) {
-      console.error('Erreur addToInventory:', error);
       throw error;
     }
   }
@@ -190,6 +189,11 @@ class GameStateApiService {
       });
 
       if (!response.ok) {
+        if (response.status === 429) {
+          // Gestion spécifique du rate limiting
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`Rate limit atteint: ${errorData.message || 'Trop de requêtes'}`);
+        }
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
 
