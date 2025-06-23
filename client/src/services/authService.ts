@@ -33,7 +33,7 @@ class AuthService {
         }
       }
     } catch (error) {
-      console.error('Erreur lors de l\'initialisation auth:', error);
+      // Token expiré ou invalide
       this.logout();
     }
   }
@@ -115,7 +115,6 @@ class AuthService {
     
     if (timeUntilExpiry > 0) {
       setTimeout(() => {
-        console.log('Token expiré - déconnexion automatique');
         this.logout();
       }, timeUntilExpiry);
     }

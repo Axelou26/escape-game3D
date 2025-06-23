@@ -20,7 +20,8 @@ const ERROR_FILTERS = [
   'SecurityError: The user has exited the lock',
   'Failed to execute \'requestPointerLock\'',
   'NotAllowedError: The request is not allowed by the user agent',
-  'SecurityError'
+  'SecurityError',
+  'La scène est déjà initialisée'
 ];
 
 /**

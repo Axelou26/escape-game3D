@@ -36,8 +36,8 @@ export const Inventory: React.FC<InventoryProps> = ({ items, onUseItem, onItemCl
         return '🪞'; // Énigme du miroir
       case 'riddle-light':
         return '☀️'; // Énigme de la lumière
-      case 'professors-journal':
-        return '📖'; // Journal du professeur
+      case 'mysterious-book':
+        return '📖';
       
    
       

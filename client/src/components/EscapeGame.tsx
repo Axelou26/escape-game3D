@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BibliothequeScene } from './3d/BibliothequeScene';
 import { LaboratoireScene } from './3d/LaboratoireScene';
@@ -14,7 +14,7 @@ import { InventoryItem, GameState } from '../types/gameTypes';
 import './game/EscapeGame.css';
 import { scoreService, ScoreEventType } from '../services/scoreService';
 import { gameApi } from '../services/gameApi';
-import { gameStateApi, CurrentTimeResponse } from '../services/gameStateApi';
+import { gameStateApi } from '../services/gameStateApi';
 
 import { inventoryService } from '../services/inventoryService';
 
@@ -50,12 +50,11 @@ export const EscapeGame: React.FC = () => {
   const [currentCodeType, setCurrentCodeType] = useState<'drawer' | 'painting'>('drawer');
   const [codeErrorMessage, setCodeErrorMessage] = useState('');
   const [showBook, setShowBook] = useState(false);
-  const [currentBookContent, setCurrentBookContent] = useState<any>(null);
   const [showRiddleContent, setShowRiddleContent] = useState(false);
   const [currentRiddleContent, setCurrentRiddleContent] = useState<any>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [selectedRiddle, setSelectedRiddle] = useState<string | null>(null);
   const [isPaintingCodeValid, setIsPaintingCodeValid] = useState(false);
+  const [gameResetKey, setGameResetKey] = useState(0); // Pour forcer le remontage des composants 3D
 
   // SUPPRESSION DU MODE OFFLINE - Connexion serveur OBLIGATOIRE
   const [connectionError, setConnectionError] = useState(false);
@@ -170,21 +169,21 @@ export const EscapeGame: React.FC = () => {
   const handleScoreUpdate = useCallback(async (event: ScoreEventType, details?: string) => {
     try {
       const result = await scoreService.updateScore(event, details);
-      setGameState(prevState => ({
-        ...prevState,
-        score: result.newScore
-      }));
+      if (result.newScore !== undefined) {
+        setGameState(prevState => ({ 
+          ...prevState, 
+          score: result.newScore 
+        }));
+      }
       
       if (result.points !== 0) {
         const message = result.points > 0 
           ? `+${result.points} points !` 
           : `${result.points} points`;
-        console.log(`Score mis à jour: ${message} (Total: ${result.newScore})`);
+        // Score mis à jour
       }
     } catch (error) {
       console.error('Erreur lors de la mise à jour du score:', error);
-      setConnectionError(true);
-      setError('Erreur de score - Connexion serveur requise');
     }
   }, []);
 
@@ -205,7 +204,6 @@ export const EscapeGame: React.FC = () => {
     switch (action) {
       case 'collect':
         handleScoreUpdate('ITEM_COLLECTED');
-        handleInventoryUpdate(objectId, objectType, data);
         break;
 
       case 'enterCode':
@@ -228,7 +226,6 @@ export const EscapeGame: React.FC = () => {
             handleScoreUpdate('CODE_INCORRECT');
           }
         }
-        handleCodeFeedback(data.isCorrect);
         break;
 
       case 'checkBeakerSequence':
@@ -237,12 +234,10 @@ export const EscapeGame: React.FC = () => {
         } else {
           handleScoreUpdate('BEAKER_SEQUENCE_WRONG');
         }
-        handleBeakerFeedback(data.isCorrect);
         break;
 
       case 'changeRoom':
         handleScoreUpdate('ROOM_CHANGE');
-        handleRoomChange(data.newRoom);
         break;
 
       case 'examine':
@@ -274,6 +269,7 @@ export const EscapeGame: React.FC = () => {
           setTimeout(() => setMessage(''), 3000);
         }
         break;
+
       case 'feedback':
         if (objectId === 'sequence' && data === 'correct') {
           setGameState(prevState => ({
@@ -285,6 +281,7 @@ export const EscapeGame: React.FC = () => {
           setTimeout(() => setMessage(''), 3000);
         }
         break;
+
       case 'add_to_inventory':
         try {
           let itemId: string;
@@ -324,10 +321,10 @@ export const EscapeGame: React.FC = () => {
             itemDescription = 'Une énigme mystérieuse...';
             itemContent = riddleData.content;
           } else if (objectId === 'mysterious-book') {
-            itemId = 'professors-journal';
+            itemId = 'mysterious-book';  // Garder l'identifiant original
             itemType = 'note';
-            itemName = 'Journal du Professeur';
-            itemDescription = 'Un vieux journal contenant des notes énigmatiques';
+            itemName = 'Livre Mystérieux';
+            itemDescription = 'Un livre ancien aux pages jaunies contenant des secrets mystérieux';
           } else if (objectId === 'shadow-riddle-symbol') {
             const riddleData = await gameApi.getRiddleContent('riddle-shadow');
             itemId = 'riddle-shadow';
@@ -387,26 +384,6 @@ export const EscapeGame: React.FC = () => {
         } catch (error) {
           setMessage('Erreur lors de l\'ajout à l\'inventaire');
           setTimeout(() => setMessage(''), 3000);
-        }
-        break;
-
-      case 'add_to_inventory_riddle':
-        try {
-          const result = await inventoryService.addItem(
-            'riddle-ancient',
-            'riddle',
-            'Énigme Ancienne',
-            'Une énigme qui semble liée au tableau...'
-          );
-          
-          setGameState(prevState => ({
-            ...prevState,
-            inventory: result.inventory as InventoryItem[]
-          }));
-
-          handleScoreUpdate('ITEM_COLLECTED');
-        } catch (error) {
-          console.error('Erreur lors de l\'ajout de l\'énigme:', error);
         }
         break;
 
@@ -478,16 +455,18 @@ export const EscapeGame: React.FC = () => {
           setTimeout(() => setMessage(''), 3000);
         }
         break;
+
       case 'symbol':
         setTimeout(() => setMessage(''), 3000);
         break;
+
       case 'door':
         if (objectId === 'secret-door') {
           setTimeout(() => setMessage(''), 3000);
         }
         break;
     }
-  }, [gameState, isTransitioning, handleScoreUpdate]);
+  }, [isTransitioning, handleScoreUpdate]);
 
   // Initialisation du jeu
   useEffect(() => {
@@ -606,34 +585,26 @@ export const EscapeGame: React.FC = () => {
         const response = await gameStateApi.syncTimer(gameState.elapsedTime);
         if (response.status === 'success' && isMounted) {
           // Corriger le temps ET le score avec les données serveur
+          const updates: Partial<GameState> = {};
+          
+          const timeDifference = Math.abs(gameState.elapsedTime - response.elapsedTime);
+          if (timeDifference > 2) {
+            // Ajuster seulement si l'écart est significatif (plus de 2 secondes)
+            updates.elapsedTime = response.elapsedTime;
+          }
+
+          if (response.score !== gameState.score) {
+            updates.score = response.score;
+          }
+
+          if (response.penaltiesApplied && response.penaltiesApplied > 0) {
+            // Pénalités appliquées
+          }
+
           setGameState(prevState => {
             if (prevState.gameCompleted) return prevState;
             
-            // Calculer la différence et ajuster si nécessaire
-            const timeDifference = Math.abs(response.elapsedTime - prevState.elapsedTime);
-            const shouldCorrect = timeDifference > 5; // Corriger si écart > 5 secondes
-            const scoreChanged = response.score !== prevState.score;
-            
-            if (shouldCorrect) {
-              console.log(`Correction du timer local: ${prevState.elapsedTime}s -> ${response.elapsedTime}s (écart: ${timeDifference}s)`);
-            }
-
-            if (scoreChanged) {
-              console.log(`Score mis à jour par le serveur: ${prevState.score} -> ${response.score}`);
-              if (response.penaltiesApplied > 0) {
-                console.log(`⏰ ${response.penaltiesApplied} pénalité(s) de temps appliquée(s) (-${response.penaltiesApplied * 10} points)`);
-                
-                // Afficher un message à l'utilisateur pour les pénalités de temps
-                setMessage(`⏰ Pénalité de temps : -${response.penaltiesApplied * 10} points (après 2 minutes d'inactivité)`);
-                setTimeout(() => setMessage(''), 4000);
-              }
-            }
-
-            return {
-              ...prevState,
-              elapsedTime: shouldCorrect ? response.elapsedTime : prevState.elapsedTime,
-              score: response.score // CORRECTION : Utiliser le score du serveur avec pénalités
-            };
+            return { ...prevState, ...updates };
           });
 
           // Vérifier si le jeu doit se terminer
@@ -701,7 +672,14 @@ export const EscapeGame: React.FC = () => {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [gameState.score, gameState.currentRoom, isLoading, saveGameState]); // Suppression d'elapsedTime et ajout de conditions plus restrictives
+  }, [gameState.score, gameState.currentRoom, gameState.elapsedTime, isLoading, saveGameState, gameState.gameCompleted]);
+
+  // Gestion globale des états
+  useEffect(() => {
+    if (gameState) {
+      // Logique de gestion d'état si nécessaire
+    }
+  }, [gameState]);
 
   const handleCodeSubmit = useCallback(async (code: string) => {
     try {
@@ -790,12 +768,6 @@ export const EscapeGame: React.FC = () => {
     }
   };
 
-  const formatTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
   // Gestionnaire pour la touche M
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -810,13 +782,6 @@ export const EscapeGame: React.FC = () => {
 
   // Gestionnaire pour le changement de salle
   const handleRoomChange = useCallback((newRoom: 'library' | 'laboratory' | 'secret-chamber') => {
-    // Debug: afficher l'état actuel
-    console.log('Tentative de changement de salle:', {
-      from: gameState.currentRoom,
-      to: newRoom,
-      unlockedRooms: gameState.unlockedRooms
-    });
-
     // Vérifier si la salle de destination est déverrouillée
     if (!gameState.unlockedRooms.includes(newRoom)) {
       const roomNames = {
@@ -886,6 +851,9 @@ export const EscapeGame: React.FC = () => {
         // Réinitialiser l'état principal du jeu
         setGameState(data.data.gameState);
         
+        // Vider complètement l'inventaire service local
+        inventoryService.resetInventory();
+        
         // Nettoyer complètement le localStorage
         localStorage.removeItem('gameState');
         
@@ -899,8 +867,8 @@ export const EscapeGame: React.FC = () => {
         setShowRiddleContent(false);
         setCurrentRiddleContent(null);
         setIsTransitioning(false);
-        setSelectedRiddle(null);
         setIsPaintingCodeValid(false);
+        setGameResetKey(Date.now());
       } else {
         throw new Error(data.message || 'Erreur lors de la réinitialisation du jeu');
       }
@@ -929,13 +897,12 @@ export const EscapeGame: React.FC = () => {
           content: riddleContent.content
         });
         setShowRiddleContent(true);
-        setSelectedRiddle(item.id);
       } catch (error) {
         console.error('Erreur lors du chargement de l\'énigme:', error);
         setMessage('Impossible de charger l\'énigme');
         setTimeout(() => setMessage(''), 3000);
       }
-    } else if (item.id === 'professors-journal') {
+    } else if (item.id === 'mysterious-book') {
       setShowBook(true);
     }
   }, []);
@@ -1007,6 +974,7 @@ export const EscapeGame: React.FC = () => {
           <div className="game-scene">
             {gameState.currentRoom === 'library' && (
               <BibliothequeScene
+                key={`library-${gameResetKey}`}
                 onInteract={handleInteract}
                 onUpdateGameState={updateGameState}
                 inventory={gameState.inventory}
@@ -1016,6 +984,7 @@ export const EscapeGame: React.FC = () => {
             )}
             {gameState.currentRoom === 'laboratory' && (
               <LaboratoireScene
+                key={`laboratory-${gameResetKey}`}
                 onInteract={handleInteract}
                 onUpdateGameState={updateGameState}
                 periodicTableUnlocked={gameState.periodicTableUnlocked}
@@ -1024,6 +993,7 @@ export const EscapeGame: React.FC = () => {
             )}
             {gameState.currentRoom === 'secret-chamber' && (
               <SecretChamber3D
+                key={`secret-chamber-${gameResetKey}`}
                 onInteract={handleInteract}
                 onUpdateGameState={updateGameState}
                 onEndGame={endGame}

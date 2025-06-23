@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
 import { GameState } from '../../../types/gameState';
@@ -130,7 +130,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     }, 50); // Debounce de 50ms
 
     return () => clearTimeout(timeoutId);
-  }, [periodicTableUnlocked]); // Suppression d'onUpdateGameState des dépendances
+  }, [periodicTableUnlocked, onUpdateGameState]);
 
   // Synchronisation optimisée avec debounce
   useEffect(() => {
@@ -414,7 +414,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         break;
       }
     }
-  }, [checkColorSequence, isPeriodicTableLocked, periodicTableUnlocked, onInteract]);
+  }, [checkColorSequence, isPeriodicTableLocked, periodicTableUnlocked, onInteract, inventory, onUpdateGameState]);
 
   // Mettre à jour la ref quand l'état change
   useEffect(() => {
@@ -503,6 +503,9 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     return () => {
       isMountedRef.current = false;
       
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const mountElement = mountRef.current;
+      
       // Nettoyer les animations
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -544,8 +547,8 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
 
       // Nettoyer le renderer
       if (rendererRef.current) {
-        if (mountRef.current?.contains(rendererRef.current.domElement)) {
-          mountRef.current.removeChild(rendererRef.current.domElement);
+        if (mountElement?.contains(rendererRef.current.domElement)) {
+          mountElement.removeChild(rendererRef.current.domElement);
         }
         rendererRef.current.dispose();
         rendererRef.current = null;
@@ -573,7 +576,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     }
 
     initScene();
-  }, [initRenderer, onInteract, onUpdateGameState, handleInteraction, checkCollision]);
+  }, []);
 
   // Initialisation du laboratoire
   const initScene = useCallback(() => {

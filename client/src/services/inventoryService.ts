@@ -111,7 +111,6 @@ class InventoryService {
     try {
       const serverInventory = await gameStateApi.getInventory();
       this.currentInventory = serverInventory;
-      console.log('✅ Inventaire synchronisé avec le serveur');
     } catch (error) {
       handleError(error, 'Erreur lors de la synchronisation de l\'inventaire');
       throw new Error('Impossible de synchroniser l\'inventaire. Connexion serveur requise.');
@@ -121,7 +120,6 @@ class InventoryService {
   // Réinitialiser complètement l'inventaire (pour le redémarrage du jeu)
   resetInventory(): void {
     this.currentInventory = [];
-    console.log('🔄 Inventaire service réinitialisé');
   }
 }
 

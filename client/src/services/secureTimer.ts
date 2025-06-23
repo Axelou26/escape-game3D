@@ -30,22 +30,23 @@ class SecureTimerService {
   // Démarrer le timer - SYNCHRONISATION OBLIGATOIRE
   async start(): Promise<void> {
     if (this.syncIntervalId !== null) {
-      console.log('⚠️ Timer déjà démarré, ignoré');
-      return;
+      return; // Timer déjà démarré
     }
 
-    try {
-      // Synchronisation initiale OBLIGATOIRE
-      await this.syncWithServer();
-      
-      // Démarrer les synchronisations régulières
-      this.startSyncTimer();
-      
-      console.log('🕐 Timer sécurisé démarré (serveur uniquement)');
-    } catch (error) {
-      console.error('Erreur lors du démarrage du timer:', error);
-      throw new Error('Impossible de démarrer le timer. Connexion serveur requise.');
-    }
+    this.syncIntervalId = setInterval(async () => {
+      try {
+        await this.syncWithServer();
+      } catch (error) {
+        console.error('Erreur de synchronisation critique:', error);
+        // Arrêter le timer en cas d'erreur de synchronisation
+        this.stop();
+        this.notifyCallbacks({
+          ...this.currentState,
+          isRunning: false,
+          gameEnded: true
+        });
+      }
+    }, this.SYNC_INTERVAL);
   }
 
   // Arrêter le timer
@@ -55,7 +56,6 @@ class SecureTimerService {
       this.syncIntervalId = null;
     }
     this.currentState.isRunning = false;
-    console.log('🛑 Timer sécurisé arrêté');
   }
 
   // Ajouter un callback pour les mises à jour
@@ -77,24 +77,6 @@ class SecureTimerService {
   }
 
   // Timer de synchronisation avec le serveur UNIQUEMENT
-  private startSyncTimer(): void {
-    this.syncIntervalId = setInterval(async () => {
-      try {
-        await this.syncWithServer();
-      } catch (error) {
-        console.error('Erreur de synchronisation critique:', error);
-        // Arrêter le timer en cas d'erreur de synchronisation
-        this.stop();
-        this.notifyCallbacks({
-          ...this.currentState,
-          isRunning: false,
-          gameEnded: true
-        });
-      }
-    }, this.SYNC_INTERVAL);
-  }
-
-  // Synchronisation avec le serveur - OBLIGATOIRE
   private async syncWithServer(): Promise<void> {
     try {
       const token = localStorage.getItem('token');
@@ -130,7 +112,7 @@ class SecureTimerService {
         this.notifyCallbacks(this.currentState);
 
         if (response.penaltiesApplied > 0) {
-          console.log(`⏰ ${response.penaltiesApplied} pénalité(s) de temps appliquée(s)`);
+          // Pénalités appliquées
         }
       }
     } catch (error) {
@@ -143,7 +125,6 @@ class SecureTimerService {
   private handleVisibilityChange(): void {
     if (!document.hidden && this.syncIntervalId !== null) {
       // Page redevient visible - synchronisation immédiate
-      console.log('🔄 Page visible - synchronisation immédiate');
       this.syncWithServer().catch(console.error);
     }
   }

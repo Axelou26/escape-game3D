@@ -22,10 +22,6 @@ export const BibliothequeScene: React.FC<BibliothequeSceneProps> = ({
   const [examinedObject, setExaminedObject] = useState<{ id: string; type: string; description: string; } | null>(null);
   const [showBook, setShowBook] = useState(false);
 
-  const hasLaboratoryKey = Array.isArray(inventory) && inventory.some(item => 
-    typeof item === 'string' ? item === 'laboratory-key' : item.id === 'laboratory-key'
-  );
-
   // Gestionnaire d'interactions local
   const handleInteraction = (objectId: string, objectType: string, action?: string) => {
     // Pour les actions spéciales, les déléguer directement sans interception
@@ -60,7 +56,7 @@ export const BibliothequeScene: React.FC<BibliothequeSceneProps> = ({
   };
 
   const handleItemClick = (item: InventoryItem) => {
-    if (item.id === 'professors-journal') {
+    if (item.id === 'mysterious-book') {
       setShowBook(true);
     }
   };

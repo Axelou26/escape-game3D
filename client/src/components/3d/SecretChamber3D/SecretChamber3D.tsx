@@ -56,19 +56,6 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     sunRiddleCollected: false
   });
 
-  const gameStateRef = useRef<GameState>({
-    score: 1000,
-    elapsedTime: 0,
-    currentRoom: 'secret-chamber',
-    inventory: [],
-    microscopeEnigmeResolved: false,
-    periodicTableUnlocked: false,
-    unlockedRooms: [],
-    computerUnlocked: false,
-    gameCompleted: false,
-    artifactUnlocked: false
-  });
-
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const navigate = useNavigate();
 
@@ -1104,33 +1091,24 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     
 
     return () => {
-      console.log("Début du démontage du composant");
-      
-      //Marquer le composant comme en cours de démontage
       isMountedRef.current = false;
       
-      //  Nettoyer les animations
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = undefined;
       }
 
-      //  Nettoyer les événements
+      // Nettoyer tous les event listeners
       if (handleResizeRef.current) {
         window.removeEventListener('resize', handleResizeRef.current);
-        handleResizeRef.current = null;
       }
       if (handleKeyDownRef.current) {
-        window.removeEventListener('keydown', handleKeyDownRef.current);
-        handleKeyDownRef.current = null;
+        document.removeEventListener('keydown', handleKeyDownRef.current);
       }
       if (handleKeyUpRef.current) {
-        window.removeEventListener('keyup', handleKeyUpRef.current);
-        handleKeyUpRef.current = null;
+        document.removeEventListener('keyup', handleKeyUpRef.current);
       }
       if (handleClickRef.current) {
-        window.removeEventListener('click', handleClickRef.current);
-        handleClickRef.current = null;
+        document.removeEventListener('click', handleClickRef.current);
       }
 
       // Nettoyer Three.js
@@ -1168,27 +1146,16 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       // Dispose of shared materials and geometries
       Object.values(sharedMaterials).forEach(material => material.dispose());
       Object.values(sharedGeometries).forEach(geometry => geometry.dispose());
-
-      console.log("Composant complètement démonté");
     };
   }, []);
 
   // Effet principal pour l'initialisation de la scène
   useEffect(() => {
-    if (!mountRef.current || !isMountedRef.current || isDisposedRef.current) {
-      console.log("Initialisation de la scène impossible : composant non monté ou déjà disposé");
-      return;
-    }
-
-    if (isInitializedRef.current) {
-      console.log("La scène est déjà initialisée");
-      return;
-    }
-
-    console.log("Début de l'initialisation de la scène");
+    if (!mountRef.current || !isMountedRef.current || isDisposedRef.current) return;
+    if (isInitializedRef.current) return;
+    
     const timeoutId = setTimeout(() => {
       if (!isMountedRef.current) {
-        console.log("Annulation de l'initialisation : composant démonté");
         return;
       }
       initScene();
@@ -1197,7 +1164,16 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [initRenderer, handleInteraction, movePlayer, updateInteractiveHighlight]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fonction de collision simplifiée
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const checkCollision = useCallback((newPosition: THREE.Vector3): boolean => {
+    // Limites de base de la chambre circulaire
+    const distance = Math.sqrt(newPosition.x * newPosition.x + newPosition.z * newPosition.z);
+    return distance > 9; // Mur de la chambre circulaire
+  }, []);
 
   return (
     <>
