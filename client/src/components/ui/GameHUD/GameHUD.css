@@ -79,8 +79,36 @@
   100% { text-shadow: 0 0 10px rgba(255, 255, 255, 0.3); }
 }
 
+/* Animation spéciale pour les pénalités de temps (score négatif) */
+@keyframes score-penalty {
+  0% { 
+    color: #4CAF50;
+    text-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+    transform: scale(1);
+  }
+  25% { 
+    color: #FF5722;
+    text-shadow: 0 0 20px rgba(255, 87, 34, 0.8);
+    transform: scale(1.1);
+  }
+  50% { 
+    color: #F44336;
+    text-shadow: 0 0 25px rgba(244, 67, 54, 1);
+    transform: scale(1.05);
+  }
+  100% { 
+    color: #4CAF50;
+    text-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+    transform: scale(1);
+  }
+}
+
 .score .hud-value.changed {
   animation: score-change 0.5s ease;
+}
+
+.score .hud-value.penalty {
+  animation: score-penalty 1s ease;
 }
 
 /* Responsive Design */

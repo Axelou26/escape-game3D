@@ -9,7 +9,7 @@ export const GAME_CONFIG = {
     BEAKER_SEQUENCE_WRONG: -10,
     BEAKER_SEQUENCE_CORRECT: 100,
     ROOM_CHANGE: 200,
-    TIME_PENALTY: -10,
+    TIME_PENALTY: -30,
     FINAL_CODE_CORRECT: 200,
     FINAL_CODE_INCORRECT: -10,
     RIDDLE_SOLVED: 100,
@@ -21,7 +21,7 @@ export const GAME_CONFIG = {
   // Timer et pénalités
   TIMER: {
     TIME_PENALTY_INTERVAL: 120, // secondes (2 minutes)
-    TIME_PENALTY_POINTS: -10
+    TIME_PENALTY_POINTS: -30
   },
 
   // Limites de jeu

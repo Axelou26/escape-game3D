@@ -92,7 +92,8 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
   const labStateRef = useRef({
     isComputerUnlocked: false,
     isLockerUnlocked: false,
-    computerAttempts: 0
+    computerAttempts: 0,
+    beakerSequenceCompleted: false
   });
 
   // Ajouter une ref pour le gameState
@@ -172,6 +173,12 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
   // Vérification de la séquence de couleurs
   const checkColorSequence = useCallback(async (beakerId: string) => {
     try {
+      // Vérifier si la séquence a déjà été complétée
+      if (labStateRef.current.beakerSequenceCompleted) {
+        onInteract('sequence-completed', 'message', 'examine', 'Vous avez déjà résolu la séquence des béchers.');
+        return;
+      }
+
       // Ajouter le bécher à la séquence actuelle
       const newSequence = [...selectedBeakersRef.current, beakerId];
       setSelectedBeakers(newSequence);
@@ -200,6 +207,9 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
           // Séquence complète et correcte
           setSelectedBeakers([]);
           selectedBeakersRef.current = [];
+          
+          // Marquer la séquence comme complétée pour éviter les répétitions
+          labStateRef.current.beakerSequenceCompleted = true;
           
           // Donner les points pour la séquence réussie
           onInteract('beaker-sequence', 'laboratory', 'checkBeakerSequence', { isCorrect: true });
@@ -338,6 +348,12 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
           case 'beaker-vert':
           case 'beaker-bleu':
           case 'beaker-violet':
+            // Vérifier si la séquence a déjà été complétée
+            if (labStateRef.current.beakerSequenceCompleted) {
+              onInteract('sequence-completed', 'message', 'examine', 'Vous avez déjà résolu la séquence des béchers.');
+              break;
+            }
+            
             // Vérifier si le bécher est déjà dans la séquence (pour permettre reset)
             if (selectedBeakersRef.current.includes(object.userData.id)) {
               // Double-clic sur un bécher déjà sélectionné = reset de la séquence

@@ -4,14 +4,45 @@ import { handleError } from '../utils/errorHandler';
 class InventoryService {
   private currentInventory: InventoryItem[] = [];
 
+  // Sauvegarder l'inventaire en localStorage comme backup
+  private saveToLocalStorage(inventory: InventoryItem[]): void {
+    try {
+      localStorage.setItem('backup_inventory', JSON.stringify(inventory));
+    } catch (error) {
+      console.warn('Impossible de sauvegarder l\'inventaire localement:', error);
+    }
+  }
+
+  // Récupérer l'inventaire depuis localStorage en cas d'urgence
+  private getFromLocalStorage(): InventoryItem[] {
+    try {
+      const backup = localStorage.getItem('backup_inventory');
+      return backup ? JSON.parse(backup) : [];
+    } catch (error) {
+      console.warn('Impossible de récupérer l\'inventaire local:', error);
+      return [];
+    }
+  }
+
   // Initialiser l'inventaire depuis le backend UNIQUEMENT
   async initializeInventory(): Promise<InventoryItem[]> {
     try {
       const inventory = await gameStateApi.getInventory();
       this.currentInventory = inventory;
+      // Sauvegarder comme backup
+      this.saveToLocalStorage(inventory);
       return inventory;
     } catch (error) {
       handleError(error, 'Erreur lors de l\'initialisation de l\'inventaire');
+      
+      // En cas d'erreur, essayer de récupérer depuis localStorage
+      const backupInventory = this.getFromLocalStorage();
+      if (backupInventory.length > 0) {
+        console.warn('🔄 Utilisation de l\'inventaire de sauvegarde local');
+        this.currentInventory = backupInventory;
+        return backupInventory;
+      }
+      
       throw new Error('Impossible d\'initialiser l\'inventaire. Connexion serveur requise.');
     }
   }
@@ -42,6 +73,8 @@ class InventoryService {
         itemContent
       );
       this.currentInventory = result.inventory;
+      // Sauvegarder comme backup après ajout réussi
+      this.saveToLocalStorage(result.inventory);
       return result;
     } catch (error: any) {
       // CORRECTION: Gérer spécifiquement l'erreur 409 (objet déjà existant)
@@ -84,6 +117,8 @@ class InventoryService {
     try {
       const inventory = await gameStateApi.removeFromInventory(itemId);
       this.currentInventory = inventory;
+      // Sauvegarder comme backup après suppression réussie
+      this.saveToLocalStorage(inventory);
       return inventory;
     } catch (error) {
       handleError(error, 'Erreur lors de la suppression de l\'inventaire');
@@ -111,6 +146,8 @@ class InventoryService {
     try {
       const serverInventory = await gameStateApi.getInventory();
       this.currentInventory = serverInventory;
+      // Sauvegarder comme backup après synchronisation réussie
+      this.saveToLocalStorage(serverInventory);
     } catch (error) {
       handleError(error, 'Erreur lors de la synchronisation de l\'inventaire');
       throw new Error('Impossible de synchroniser l\'inventaire. Connexion serveur requise.');
@@ -120,6 +157,12 @@ class InventoryService {
   // Réinitialiser complètement l'inventaire (pour le redémarrage du jeu)
   resetInventory(): void {
     this.currentInventory = [];
+    // Nettoyer également le backup local
+    try {
+      localStorage.removeItem('backup_inventory');
+    } catch (error) {
+      console.warn('Impossible de nettoyer le backup local:', error);
+    }
   }
 }
 

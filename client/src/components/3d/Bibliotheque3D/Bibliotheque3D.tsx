@@ -50,9 +50,10 @@ const createSharedMaterials = () => ({
 interface Bibliotheque3DProps {
   onInteract: (objectId: string, objectType: string, action?: string) => void;
   isCodeValid?: boolean;
+  isDrawerCodeValid?: boolean;
 }
 
-export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCodeValid = false }) => {
+export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCodeValid = false, isDrawerCodeValid = false }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<PointerLockControls | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -72,16 +73,21 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
   const raycasterRef = useRef(new THREE.Raycaster());
   const mysteriousBookCreated = useRef<boolean>(false);
   const isCodeValidRef = useRef(isCodeValid);
+  const isDrawerCodeValidRef = useRef(isDrawerCodeValid);
   
   // Ajout d'une ref pour éviter la recreation en boucle
   const isInitializedRef = useRef<boolean>(false);
   const isDisposedRef = useRef<boolean>(false);
   const isMountedRef = useRef<boolean>(false);
 
-  // Mettre à jour la ref à chaque changement de isCodeValid
+  // Mettre à jour les refs à chaque changement des props
   useEffect(() => {
     isCodeValidRef.current = isCodeValid;
   }, [isCodeValid]);
+
+  useEffect(() => {
+    isDrawerCodeValidRef.current = isDrawerCodeValid;
+  }, [isDrawerCodeValid]);
 
   // Optimisation avec useMemo pour la scène et la caméra
   const scene = useMemo(() => new THREE.Scene(), []);
@@ -476,9 +482,17 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
               }
               break;
             case 'locked-drawer':
+              // Vérifier si le code du tiroir est déjà valide - si oui, ne plus permettre l'interaction
+              if (isDrawerCodeValidRef.current) {
+                return; // Ne pas permettre l'interaction si le code est déjà validé
+              }
               onInteract(object.userData.id, object.userData.type, 'prompt_code');
               break;
             case 'painting':
+              // Vérifier si le code du tableau est déjà valide - si oui, ne plus permettre l'interaction
+              if (isCodeValidRef.current) {
+                return; // Ne pas permettre l'interaction si le code est déjà validé
+              }
               onInteract(object.userData.id, object.userData.type, 'prompt_painting_code');
               break;
           }

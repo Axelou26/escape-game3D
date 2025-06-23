@@ -10,6 +10,7 @@ interface BibliothequeSceneProps {
   showMessage?: (message: string) => void;
   onUpdateGameState?: (updates: Partial<GameState>) => void;
   isCodeValid?: boolean;
+  isDrawerCodeValid?: boolean;
 }
 
 export const BibliothequeScene: React.FC<BibliothequeSceneProps> = ({
@@ -17,7 +18,8 @@ export const BibliothequeScene: React.FC<BibliothequeSceneProps> = ({
   inventory = [],
   showMessage,
   onUpdateGameState,
-  isCodeValid = false
+  isCodeValid = false,
+  isDrawerCodeValid = false
 }) => {
   const [examinedObject, setExaminedObject] = useState<{ id: string; type: string; description: string; } | null>(null);
   const [showBook, setShowBook] = useState(false);
@@ -63,7 +65,7 @@ export const BibliothequeScene: React.FC<BibliothequeSceneProps> = ({
 
   return (
     <>
-      <Bibliotheque3D onInteract={handleInteraction} isCodeValid={isCodeValid} />
+      <Bibliotheque3D onInteract={handleInteraction} isCodeValid={isCodeValid} isDrawerCodeValid={isDrawerCodeValid} />
 
       {/* Affichage de l'objet examiné */}
       {examinedObject && (

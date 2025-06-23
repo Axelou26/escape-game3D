@@ -78,6 +78,8 @@ export const timerController = {
       const penaltyIntervals = Math.floor(validElapsedTime / GAME_CONFIG.TIMER.TIME_PENALTY_INTERVAL);
       const lastPenaltyIntervals = Math.floor(game.currentElapsedTime / GAME_CONFIG.TIMER.TIME_PENALTY_INTERVAL);
       
+      console.log(`🕐 Timer sync - User: ${req.user.id}, Temps: ${validElapsedTime}s, Intervalles pénalité: ${penaltyIntervals}, Derniers intervalles: ${lastPenaltyIntervals}`);
+      
       let newScore = game.score;
       let penaltiesApplied = 0;
 
@@ -87,6 +89,8 @@ export const timerController = {
         const totalPenalty = newPenalties * GAME_CONFIG.TIMER.TIME_PENALTY_POINTS;
         newScore = Math.max(GAME_CONFIG.LIMITS.MIN_SCORE, game.score + totalPenalty);
         penaltiesApplied = newPenalties;
+        
+        console.log(`⏰ PÉNALITÉ APPLIQUÉE - Nouvelles pénalités: ${newPenalties}, Total pénalité: ${totalPenalty}, Ancien score: ${game.score}, Nouveau score: ${newScore}`);
 
         // Enregistrer les événements de pénalité
         for (let i = 0; i < newPenalties; i++) {

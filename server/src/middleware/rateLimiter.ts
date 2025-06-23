@@ -90,12 +90,12 @@ export const inventoryRateLimit = createRateLimiter({
 // Rate limiter global pour tous les endpoints
 export const globalRateLimit = createRateLimiter({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requêtes par minute par utilisateur
+  max: 60, // 60 requêtes par minute par utilisateur (1 par seconde en moyenne)
   message: 'Trop de requêtes. Veuillez ralentir.'
 });
 
 // Middleware de détection d'activité suspecte
-export const suspiciousActivityDetector = (threshold: number = 50) => {
+export const suspiciousActivityDetector = (threshold: number = 120) => {
   const activityLog = new Map<string, number[]>();
   
   return (req: Request, res: Response, next: Function) => {
@@ -131,9 +131,9 @@ export const suspiciousActivityDetector = (threshold: number = 50) => {
   };
 };
 
-// Middleware spécifique pour les requêtes de timer - ajusté pour permettre la synchronisation normale
+// Middleware spécifique pour les requêtes de timer - sécurisé mais fonctionnel
 export const strictTimerRateLimit = createRateLimiter({
   windowMs: 60 * 1000, // 1 minute
-  max: 8, // 8 requêtes par minute maximum (plus de marge pour éviter les conflits)
+  max: 15, // 15 requêtes par minute (sync toutes les 30s = 2/min + marge pour retry)
   message: 'Trop de requêtes de timer. Synchronisation limitée pour éviter la surcharge.'
 }); 

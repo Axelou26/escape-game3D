@@ -10,6 +10,7 @@ import { CodeInput } from './ui/CodeInput/CodeInput';
 import { GameHUD } from './ui/GameHUD/GameHUD';
 import { FPSCounter } from './ui/FPSCounter';
 import { PauseMenu } from './ui/PauseMenu/PauseMenu';
+import { GameOverMessage } from './ui/GameOverMessage';
 import { InventoryItem, GameState } from '../types/gameTypes';
 import './game/EscapeGame.css';
 import { scoreService, ScoreEventType } from '../services/scoreService';
@@ -54,7 +55,9 @@ export const EscapeGame: React.FC = () => {
   const [currentRiddleContent, setCurrentRiddleContent] = useState<any>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isPaintingCodeValid, setIsPaintingCodeValid] = useState(false);
+  const [isDrawerCodeValid, setIsDrawerCodeValid] = useState(false);
   const [gameResetKey, setGameResetKey] = useState(0); // Pour forcer le remontage des composants 3D
+  const [showGameOverMessage, setShowGameOverMessage] = useState(false);
 
   // SUPPRESSION DU MODE OFFLINE - Connexion serveur OBLIGATOIRE
   const [connectionError, setConnectionError] = useState(false);
@@ -164,6 +167,19 @@ export const EscapeGame: React.FC = () => {
       return newState;
     });
   }, [saveGameState]);
+
+  // Synchroniser l'inventaire avec le serveur
+  const syncInventoryWithServer = useCallback(async () => {
+    try {
+      const serverInventory = await inventoryService.initializeInventory();
+      setGameState(prevState => ({
+        ...prevState,
+        inventory: serverInventory as InventoryItem[]
+      }));
+    } catch (error) {
+      console.warn('Erreur lors de la synchronisation de l\'inventaire:', error);
+    }
+  }, []);
 
   // Mettre à jour le score - TOUJOURS côté serveur
   const handleScoreUpdate = useCallback(async (event: ScoreEventType, details?: string) => {
@@ -490,12 +506,22 @@ export const EscapeGame: React.FC = () => {
           if (response.ok) {
             const data = await response.json();
             if (data.data) {
-              // Nettoyer l'inventaire des doublons lors du chargement
+              // CORRECTION: Récupérer l'inventaire depuis le serveur et synchroniser
+              let serverInventory = [];
+              try {
+                serverInventory = await inventoryService.initializeInventory();
+              } catch (error) {
+                console.warn('Échec de l\'initialisation de l\'inventaire:', error);
+                serverInventory = data.data.gameState.inventory || [];
+              }
+              
+              // Nettoyer l'inventaire des doublons lors du chargement et utiliser celui du serveur
               const cleanedGameState = {
                 ...data.data.gameState,
-                inventory: data.data.gameState.inventory || []
+                inventory: serverInventory
               };
               setGameState(cleanedGameState);
+              
               setMessage('Partie chargée avec succès');
               setTimeout(() => setMessage(''), 2000);
               return;
@@ -513,7 +539,20 @@ export const EscapeGame: React.FC = () => {
           if (startResponse.ok) {
             const startData = await startResponse.json();
             if (startData.data) {
-              setGameState(startData.data.gameState);
+              // CORRECTION: Récupérer l'inventaire depuis le serveur pour nouvelle partie
+              let serverInventory = [];
+              try {
+                serverInventory = await inventoryService.initializeInventory();
+              } catch (error) {
+                console.warn('Échec de l\'initialisation de l\'inventaire pour nouvelle partie:', error);
+                serverInventory = startData.data.gameState.inventory || [];
+              }
+              
+              setGameState({
+                ...startData.data.gameState,
+                inventory: serverInventory
+              });
+              
               setMessage('Nouvelle partie démarrée');
               setTimeout(() => setMessage(''), 2000);
             }
@@ -542,7 +581,9 @@ export const EscapeGame: React.FC = () => {
 
   // Timer hybride : local pour l'affichage temps réel + synchronisation périodique serveur
   useEffect(() => {
-    if (isLoading || gameState.gameCompleted) return;
+    if (isLoading || gameState.gameCompleted) {
+      return;
+    }
 
     let localTimerInterval: NodeJS.Timeout;
     let serverSyncInterval: NodeJS.Timeout;
@@ -554,14 +595,19 @@ export const EscapeGame: React.FC = () => {
     // Timer local qui s'incrémente chaque seconde pour l'affichage temps réel
     const startLocalTimer = () => {
       localTimerInterval = setInterval(() => {
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
         
         setGameState(prevState => {
-          if (prevState.gameCompleted) return prevState;
+          if (prevState.gameCompleted) {
+            return prevState;
+          }
           
+          const newTime = prevState.elapsedTime + 1;
           return {
             ...prevState,
-            elapsedTime: prevState.elapsedTime + 1
+            elapsedTime: newTime
           };
         });
       }, 1000); // Mise à jour chaque seconde
@@ -572,8 +618,8 @@ export const EscapeGame: React.FC = () => {
       if (isServerSyncInProgress || !isMounted) return;
       
       const now = Date.now();
-      // Éviter les syncs trop rapprochées (minimum 15 secondes entre les syncs pour permettre les pénalités)
-      if (lastServerSync && (now - lastServerSync) < 15000) {
+      // Éviter les syncs trop rapprochées (minimum 3 secondes entre les syncs pour le test)
+      if (lastServerSync && (now - lastServerSync) < 3000) {
         return;
       }
       
@@ -582,7 +628,9 @@ export const EscapeGame: React.FC = () => {
         lastServerSync = now;
         
         // CORRECTION : Utiliser syncTimer au lieu de getCurrentTime pour récupérer le score avec pénalités
-        const response = await gameStateApi.syncTimer(gameState.elapsedTime);
+        // Obtenir le temps actuel du state de React directement
+        const currentElapsedTime = gameState.elapsedTime;
+        const response = await gameStateApi.syncTimer(currentElapsedTime);
         if (response.status === 'success' && isMounted) {
           // Corriger le temps ET le score avec les données serveur
           const updates: Partial<GameState> = {};
@@ -598,7 +646,19 @@ export const EscapeGame: React.FC = () => {
           }
 
           if (response.penaltiesApplied && response.penaltiesApplied > 0) {
-            // Pénalités appliquées
+            // Afficher un message de pénalité de temps
+            const penaltyMessage = `⏰ Pénalité de temps: -${response.penaltiesApplied * 30} points !`;
+            setMessage(penaltyMessage);
+            setTimeout(() => setMessage(''), 4000);
+          }
+
+          // Synchroniser l'inventaire périodiquement pour éviter la désynchronisation
+          if (Math.floor(response.elapsedTime) % 60 === 0) { // Toutes les minutes
+            try {
+              await syncInventoryWithServer();
+            } catch (error) {
+              console.warn('Erreur sync inventaire périodique:', error);
+            }
           }
 
           setGameState(prevState => {
@@ -613,11 +673,27 @@ export const EscapeGame: React.FC = () => {
               ...prevState,
               gameCompleted: true
             }));
-            setMessage('Temps de jeu dépassé ! Partie terminée automatiquement.');
-            setTimeout(() => {
-              endGame();
-              navigate('/game-intro');
-            }, 3000);
+            // Appel direct au lieu d'utiliser endGame qui cause des problèmes de dépendance
+            try {
+              const token = localStorage.getItem('token');
+              if (token) {
+                await fetch(`${API_URL}/game/end`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    finalScore: gameState.score,
+                    finalTime: response.elapsedTime,
+                    gameState: gameState
+                  })
+                });
+              }
+            } catch (error) {
+              console.error('Erreur fin de jeu:', error);
+            }
+            setShowGameOverMessage(true);
           }
         } else if (response.status === 'game_ended') {
           // Gérer la fin de partie depuis le serveur
@@ -627,19 +703,35 @@ export const EscapeGame: React.FC = () => {
             elapsedTime: response.elapsedTime,
             score: response.score
           }));
-          setMessage('Temps de jeu dépassé ! Partie terminée automatiquement.');
-          setTimeout(() => {
-            endGame();
-            navigate('/game-intro');
-          }, 3000);
+          // Appel direct au lieu d'utiliser endGame
+          try {
+            const token = localStorage.getItem('token');
+            if (token) {
+              await fetch(`${API_URL}/game/end`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  finalScore: response.score,
+                  finalTime: response.elapsedTime,
+                  gameState: gameState
+                })
+              });
+            }
+          } catch (error) {
+            console.error('Erreur fin de jeu:', error);
+          }
+          setShowGameOverMessage(true);
         }
       } catch (error: any) {
-        if (error.message?.includes('429') || error.message?.includes('Rate limit')) {
-          console.warn('Rate limit atteint, prochaine sync différée');
+        console.error('Erreur sync serveur:', error);
+        if (error.message?.includes('429') || error.message?.includes('Rate limit') || error.message?.includes('Trop de requêtes')) {
           // Différer la prochaine sync en cas de rate limit
-          lastServerSync = now + 60000; // Reporter de 1 minute
-        } else {
-          console.error('Erreur sync serveur:', error);
+          lastServerSync = now + 30000; // Reporter de 30 secondes seulement
+        } else if (error.message?.includes('fetch') || error.message?.includes('NetworkError')) {
+          lastServerSync = now + 10000; // Reporter de 10 secondes pour erreur réseau
         }
       } finally {
         isServerSyncInProgress = false;
@@ -652,8 +744,8 @@ export const EscapeGame: React.FC = () => {
     // Première synchronisation avec le serveur après 3 secondes
     serverSyncTimeout = setTimeout(syncWithServer, 3000);
 
-    // CORRECTION : Synchronisations plus fréquentes pour voir les pénalités de temps (toutes les 2 minutes)
-    serverSyncInterval = setInterval(syncWithServer, 120000); // 2 minutes (même intervalle que les pénalités)
+    // Synchronisations périodiques toutes les 30 secondes
+    serverSyncInterval = setInterval(syncWithServer, 30000);
 
     return () => {
       isMounted = false;
@@ -661,7 +753,7 @@ export const EscapeGame: React.FC = () => {
       clearInterval(serverSyncInterval);
       clearTimeout(serverSyncTimeout);
     };
-  }, [isLoading, gameState.gameCompleted, endGame, navigate]);
+  }, [isLoading, gameState.gameCompleted, syncInventoryWithServer]); // Ajouté syncInventoryWithServer
 
   // Sauvegarde automatique optimisée avec debounce plus long
   useEffect(() => {
@@ -719,6 +811,7 @@ export const EscapeGame: React.FC = () => {
             inventory: [...gameState.inventory, drawerRiddle]
           });
           setMessage('Code correct ! Vous avez trouvé une énigme !');
+          setIsDrawerCodeValid(true);
         } else if (currentCodeType === 'painting') {
           // Déverrouiller la clé du laboratoire
           handleInteract('laboratory-key', 'key', 'add_key_to_inventory');
@@ -854,6 +947,13 @@ export const EscapeGame: React.FC = () => {
         // Vider complètement l'inventaire service local
         inventoryService.resetInventory();
         
+        // CORRECTION: Forcer la synchronisation avec le serveur pour s'assurer que l'inventaire est vide
+        try {
+          await inventoryService.initializeInventory();
+        } catch (error) {
+          console.warn('Synchronisation de l\'inventaire échouée après reset:', error);
+        }
+        
         // Nettoyer complètement le localStorage
         localStorage.removeItem('gameState');
         
@@ -868,6 +968,7 @@ export const EscapeGame: React.FC = () => {
         setCurrentRiddleContent(null);
         setIsTransitioning(false);
         setIsPaintingCodeValid(false);
+        setIsDrawerCodeValid(false);
         setGameResetKey(Date.now());
       } else {
         throw new Error(data.message || 'Erreur lors de la réinitialisation du jeu');
@@ -886,6 +987,20 @@ export const EscapeGame: React.FC = () => {
   const handleReturnToIntro = () => {
     navigate('/intro');
   };
+
+  // Gestionnaires pour le message de fin de jeu
+  const handleViewLeaderboard = useCallback(() => {
+    navigate('/leaderboard');
+  }, [navigate]);
+
+  const handleGameRestart = useCallback(async () => {
+    setShowGameOverMessage(false);
+    await handleRestart();
+  }, []);
+
+  const handleReturnHome = useCallback(() => {
+    navigate('/game-intro');
+  }, [navigate]);
 
   const handleInventoryItemClick = useCallback(async (item: InventoryItem) => {
     // Pour les énigmes, utiliser l'API pour récupérer le contenu
@@ -980,6 +1095,7 @@ export const EscapeGame: React.FC = () => {
                 inventory={gameState.inventory}
                 showMessage={setMessage}
                 isCodeValid={isPaintingCodeValid}
+                isDrawerCodeValid={isDrawerCodeValid}
               />
             )}
             {gameState.currentRoom === 'laboratory' && (
@@ -1128,6 +1244,17 @@ export const EscapeGame: React.FC = () => {
                 onClose={() => setShowCodeInput(false)}
               />
             </>
+          )}
+
+          {/* Message de fin de jeu */}
+          {showGameOverMessage && (
+            <GameOverMessage
+              score={gameState.score}
+              elapsedTime={gameState.elapsedTime}
+              onViewLeaderboard={handleViewLeaderboard}
+              onRestart={handleGameRestart}
+              onReturnHome={handleReturnHome}
+            />
           )}
         </>
       )}
