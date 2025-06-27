@@ -19,9 +19,9 @@ export const Inventory: React.FC<InventoryProps> = ({ items, onUseItem, onItemCl
     switch (id) {
       // === CLÉS ===
       case 'crystal-key':
-        return '💎'; // Clé en cristal
+        return '💎';
       case 'laboratory-key':
-        return '🗝️'; // Clé du laboratoire
+        return '🗝️';
       
       // === ÉNIGMES ===
       case 'riddle-mathematics':
@@ -44,20 +44,20 @@ export const Inventory: React.FC<InventoryProps> = ({ items, onUseItem, onItemCl
       // === OBJETS DE COLLECTION ===
       
       case 'ancient-key-fragment':
-        return '🗝️'; // Fragment de clé
+        return '🗝️';
       case 'crystal-shard':
-        return '💎'; // Éclat de cristal
+        return '💎';
       
       
       // === FALLBACK PAR TYPE ===
       default:
         switch (type) {
           case 'key':
-            return '🔑'; // Clé générique
+            return '🔑'; 
           case 'riddle':
-            return '🧩'; // Énigme générique
+            return '🧩';
           default:
-            return '❓'; // Objet inconnu
+            return '❓'; 
         }
     }
   };
@@ -66,29 +66,29 @@ export const Inventory: React.FC<InventoryProps> = ({ items, onUseItem, onItemCl
   const getItemStatusIcon = (item: InventoryItem): string => {
     // Ajouter des indicateurs visuels selon l'état de l'objet
     if (item.type === 'riddle') {
-      return '✨'; // Énigmes brillent
+      return '✨'; 
     }
     if (item.type === 'key') {
-      return '🔓'; // Clés peuvent ouvrir
+      return '🔓'; 
     }
     if (item.id?.includes('ancient') || item.id?.includes('mystical')) {
-      return '✨'; // Objets anciens/mystiques brillent
+      return '✨'; 
     }
-    return ''; // Pas d'indicateur spécial
+    return ''; 
   };
 
   // Fonction pour obtenir la rareté de l'objet
   const getItemRarity = (item: InventoryItem): string => {
     if (item.id === 'crystal-key' || item.id === 'sacred-artifact') {
-      return 'legendary'; // Objets légendaires
+      return 'legendary'; 
     }
     if (item.id?.includes('ancient') || item.id?.includes('mystical')) {
-      return 'rare'; // Objets rares
+      return 'rare'; 
     }
     if (item.type === 'riddle') {
-      return 'uncommon'; // Énigmes peu communes
+      return 'uncommon';
     }
-    return 'common'; // Objets communs
+    return 'common'; 
   };
 
   const handleItemClick = (item: InventoryItem) => {

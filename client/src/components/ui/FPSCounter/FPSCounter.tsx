@@ -7,12 +7,12 @@ export const FPSCounter: React.FC = () => {
   const lastTimeRef = useRef(performance.now());
   const animationFrameRef = useRef<number>();
 
-  // Fonction de calcul FPS optimisée avec debounce
+  // Fonction de calcul FPS avec debounce
   const updateFPS = useCallback(() => {
     const now = performance.now();
     frameCountRef.current++;
 
-    // Calculer les FPS toutes les 500ms au lieu de chaque seconde
+    // Calculer les FPS toutes les 500ms 
     // pour une meilleure réactivité mais moins de calculs
     if (now >= lastTimeRef.current + 500) {
       const deltaTime = now - lastTimeRef.current;
@@ -21,7 +21,7 @@ export const FPSCounter: React.FC = () => {
       // Limiter les mises à jour du state seulement si la différence est significative
       setFps(prevFps => {
         const difference = Math.abs(currentFPS - prevFps);
-        if (difference > 2) { // Seuil de 2 FPS pour éviter les micro-variations
+        if (difference > 2) { 
           return currentFPS;
         }
         return prevFps;
@@ -45,9 +45,9 @@ export const FPSCounter: React.FC = () => {
   }, [updateFPS]);
 
   const getFPSColor = useCallback((fps: number) => {
-    if (fps >= 60) return '#4CAF50'; // Vert pour 60+ FPS
-    if (fps >= 30) return '#FFC107'; // Jaune pour 30-59 FPS
-    return '#F44336'; // Rouge pour moins de 30 FPS
+    if (fps >= 60) return '#4CAF50'; 
+    if (fps >= 30) return '#FFC107'; 
+    return '#F44336';
   }, []);
 
   return (

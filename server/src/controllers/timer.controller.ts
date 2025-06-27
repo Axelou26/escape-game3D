@@ -6,7 +6,7 @@ import { GAME_CONFIG } from '../config/gameConfig';
 
 // Cache pour limiter les requêtes fréquentes du même utilisateur
 const lastRequestTime = new Map<number, number>();
-const REQUEST_COOLDOWN = 10000; // 10 secondes minimum entre les requêtes du même utilisateur (réduit de 30s)
+const REQUEST_COOLDOWN = 10000; 
 
 export const timerController = {
   // Synchroniser le timer avec le serveur
@@ -52,7 +52,7 @@ export const timerController = {
       // Vérifier si le temps client est cohérent (tolérance de 10 secondes)
       const timeDifference = Math.abs(serverElapsedTime - clientElapsedTime);
       if (timeDifference > 10) {
-        // Time desync warning removed
+        
       }
 
       // Utiliser le temps serveur comme référence
@@ -60,7 +60,7 @@ export const timerController = {
 
       // Vérifier la limite de temps de jeu
       if (validElapsedTime > GAME_CONFIG.LIMITS.MAX_GAME_DURATION) {
-        // Terminer automatiquement la partie
+      
         await game.update({
           isCompleted: true,
           currentElapsedTime: GAME_CONFIG.LIMITS.MAX_GAME_DURATION
@@ -78,7 +78,7 @@ export const timerController = {
       const penaltyIntervals = Math.floor(validElapsedTime / GAME_CONFIG.TIMER.TIME_PENALTY_INTERVAL);
       const lastPenaltyIntervals = Math.floor(game.currentElapsedTime / GAME_CONFIG.TIMER.TIME_PENALTY_INTERVAL);
       
-              // Timer sync debug info removed
+            
       
       let newScore = game.score;
       let penaltiesApplied = 0;
@@ -90,7 +90,7 @@ export const timerController = {
         newScore = Math.max(GAME_CONFIG.LIMITS.MIN_SCORE, game.score + totalPenalty);
         penaltiesApplied = newPenalties;
         
-                  // Penalty applied debug info removed
+                 
 
         // Enregistrer les événements de pénalité
         for (let i = 0; i < newPenalties; i++) {
@@ -212,11 +212,10 @@ export const timerController = {
         throw new AppError(404, 'Partie non trouvée');
       }
 
-      // Pour l'instant, on enregistre juste l'événement
-      // Dans une version future, on pourrait implémenter une vraie pause
+      
       await ScoreEvent.create({
         gameId: game.id,
-        eventType: 'TIME_PENALTY', // Utiliser un type existant pour l'instant
+        eventType: 'TIME_PENALTY', 
         points: 0,
         details: 'Jeu mis en pause'
       });

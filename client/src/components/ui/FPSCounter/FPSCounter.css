@@ -1,13 +1,13 @@
 .fps-counter {
   position: fixed;
-  top: 180px; /* Positionné en dessous du HUD principal */
+  top: 180px;
   right: 20px;
   background: rgba(0, 0, 0, 0.8);
   padding: 8px 12px;
   border-radius: 8px;
   color: #fff;
   font-family: 'Courier New', monospace;
-  z-index: 2001; /* Au-dessus du HUD principal pour être visible */
+  z-index: 2001; 
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(5px);
