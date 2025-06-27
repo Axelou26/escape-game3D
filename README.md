@@ -165,6 +165,6 @@ cd server && npm test
 4. Push vers la branche (`git push origin feature/nouvelle-fonctionnalite`)
 5. Ouvrir une Pull Request
 
-## 📄 Licence
+## 📄 droit auteur
 
-Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails. 
+Ce projet est sous licence. axel.mancini@ynov.com
