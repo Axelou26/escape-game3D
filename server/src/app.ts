@@ -6,7 +6,7 @@ import gameStateRoutes from './routes/game-state.routes';
 import leaderboardRoutes from './routes/leaderboard.routes';
 import riddleRoutes from './routes/riddle.routes';
 import codePuzzleRoutes from './routes/code-puzzle.routes';
-import scoreRoutes from './routes/score.routes';
+import { scoreRouter } from './routes/score.routes';
 
 const app = express();
 
@@ -27,7 +27,7 @@ app.use('/api/game-state', gameStateRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/riddles', riddleRoutes);
 app.use('/api/codes', codePuzzleRoutes);
-app.use('/api/score', scoreRoutes);
+app.use('/api/score', scoreRouter);
 
 // Route de test
 app.get('/api/health', (req, res) => {
