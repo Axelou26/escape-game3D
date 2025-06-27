@@ -45,7 +45,7 @@ Et le deuxième est plus petit que le quatrième.`,
         name: 'Journal du Professeur',
         description: 'Le journal personnel du professeur disparu',
         content: {
-          riddle: "20 Juillet 1969\n\nJe suis l'année du changement,\nL'année où l'homme quitta son monde rond.\nÀ bord d'un aigle, il se posa,\nSur un sol que nul ne foulait, voilà.\n\nCe fut un petit pas pour l'homme mais un grand pas pour l'humanité.\n\nLa réponse est dans ce tiroir que plus personne n'ouvre.",
+          riddle: "20 Juillet 1969\n\nJe suis l'année du changement,\nL'année où l'homme quitta son monde rond.\nÀ bord d'un aigle, il se posa,\nSur un sol que nul ne foulait.\n\nCe fut un petit pas pour l'homme mais un grand pas pour l'humanité.\n\nLa réponse est dans ce tiroir que plus personne n'ouvre.",
           answer: '1969',
           hint: 'L\'année où l\'homme a fait un petit pas mais l\'humanité un grand pas.'
         },
@@ -109,7 +109,7 @@ Et le deuxième est plus petit que le quatrième.`,
         name: 'XCXX',
         description: 'Une énigme gravée dans les hiéroglyphes',
         content: {
-          riddle: "Je montre tout mais ne garde rien,\nJe reflète le mal comme le bien.\nDans mon monde, tout est inversé,\nLa droite devient la gauche, c'est prouvé.\nQui suis-je, moi qui révèle la vérité,\nMais dans un monde de réalité ?\nTrouve ma position dans l'alphabet, et tu sauras le chiffre",
+          riddle: "Je montre tout mais ne garde rien,\nJe reflète le mal comme le bien.\nDans mon monde, tout est inversé,\nLa droite devient la gauche, c'est prouvé.\nQui suis-je, moi qui révèle la vérité,\nMais dans un monde de réalité ?\nTrouve la position de ma première lettre dans l'alphabet, et tu sauras le chiffre",
           answer: '3',
           hint: 'Je montre votre reflet...'
         },
