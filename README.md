@@ -84,7 +84,7 @@ escape-game3D/
    - Créer une base de données `escape_game`
    - Configurer les variables d'environnement dans `server/.env`
 
-   # mes env :
+    ** mes env :
       
       PORT=3001
       NODE_ENV=development
