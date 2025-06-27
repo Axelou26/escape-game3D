@@ -181,7 +181,7 @@ export const EscapeGame: React.FC = () => {
     }
   }, []);
 
-  // Mettre à jour le score - TOUJOURS côté serveur
+  // Mettre à jour le score côté serveur
   const handleScoreUpdate = useCallback(async (event: ScoreEventType, details?: string) => {
     try {
       const result = await scoreService.updateScore(event, details);
@@ -306,7 +306,7 @@ export const EscapeGame: React.FC = () => {
           let itemDescription: string;
           let itemContent: any = undefined;
 
-          // CORRECTION: Simplification comme dans la bibliothèque avec fallback
+          
           if (objectId === 'riddle-elements') {
             try {
               // Récupérer l'énigme depuis l'API
@@ -337,36 +337,36 @@ export const EscapeGame: React.FC = () => {
             itemDescription = 'Une énigme mystérieuse...';
             itemContent = riddleData.content;
           } else if (objectId === 'mysterious-book') {
-            itemId = 'mysterious-book';  // Garder l'identifiant original
+            itemId = 'mysterious-book';  
             itemType = 'note';
             itemName = 'Livre Mystérieux';
             itemDescription = 'Un livre ancien aux pages jaunies contenant des secrets mystérieux';
           } else if (objectId === 'shadow-riddle-symbol') {
-            const riddleData = await gameApi.getRiddleContent('riddle-shadow');
-            itemId = 'riddle-shadow';
+            const riddleData = await gameApi.getRiddleContent('riddle-letter');
+            itemId = 'riddle-letter';
             itemType = 'riddle';
-            itemName = riddleData.name; // Utiliser le vrai nom de la base de données
+            itemName = riddleData.name;
             itemDescription = 'Une énigme mystérieuse apparue sur le symbole mystique...';
             itemContent = riddleData.content;
           } else if (objectId === 'sun-symbol') {
-            const riddleData = await gameApi.getRiddleContent('riddle-light');
-            itemId = 'riddle-light';
+            const riddleData = await gameApi.getRiddleContent('riddle-apples');
+            itemId = 'riddle-apples';
             itemType = 'riddle';
-            itemName = riddleData.name; // Utiliser le vrai nom de la base de données
+            itemName = riddleData.name; 
             itemDescription = 'Une énigme mystérieuse gravée sur un symbole solaire...';
             itemContent = riddleData.content;
           } else if (objectId === 'ancient-book') {
-            const riddleData = await gameApi.getRiddleContent('riddle-wisdom');
-            itemId = 'riddle-wisdom';
+            const riddleData = await gameApi.getRiddleContent('riddle-school');
+            itemId = 'riddle-school';
             itemType = 'riddle';
-            itemName = riddleData.name; // Utiliser le vrai nom de la base de données
+            itemName = riddleData.name; 
             itemDescription = 'Une énigme cachée dans un livre ancien...';
             itemContent = riddleData.content;
           } else if (objectId === 'mirror-riddle-glyph') {
             const riddleData = await gameApi.getRiddleContent('riddle-mirror');
             itemId = 'riddle-mirror';
             itemType = 'riddle';
-            itemName = riddleData.name; // Utiliser le vrai nom de la base de données
+            itemName = riddleData.name; 
             itemDescription = 'Une énigme gravée dans les hiéroglyphes...';
             itemContent = riddleData.content;
           } else {
@@ -496,7 +496,7 @@ export const EscapeGame: React.FC = () => {
         const token = localStorage.getItem('token');
         
         if (token) {
-          // D'abord, essayons de récupérer une partie en cours
+         
           const response = await fetch(`${API_URL}/game/current`, {
             headers: {
               'Authorization': `Bearer ${token}`
@@ -506,7 +506,7 @@ export const EscapeGame: React.FC = () => {
           if (response.ok) {
             const data = await response.json();
             if (data.data) {
-              // CORRECTION: Récupérer l'inventaire depuis le serveur et synchroniser
+             
               let serverInventory = [];
               try {
                 serverInventory = await inventoryService.initializeInventory();
@@ -539,7 +539,7 @@ export const EscapeGame: React.FC = () => {
           if (startResponse.ok) {
             const startData = await startResponse.json();
             if (startData.data) {
-              // CORRECTION: Récupérer l'inventaire depuis le serveur pour nouvelle partie
+             
               let serverInventory = [];
               try {
                 serverInventory = await inventoryService.initializeInventory();
@@ -590,7 +590,7 @@ export const EscapeGame: React.FC = () => {
     let serverSyncTimeout: NodeJS.Timeout;
     let isServerSyncInProgress = false;
     let isMounted = true; 
-    let lastServerSync = 0; // Timestamp de la dernière sync serveur
+    let lastServerSync = 0;
 
     // Timer local qui s'incrémente chaque seconde pour l'affichage temps réel
     const startLocalTimer = () => {
@@ -613,12 +613,12 @@ export const EscapeGame: React.FC = () => {
       }, 1000); // Mise à jour chaque seconde
     };
 
-    // Synchronisation avec le serveur (moins fréquente) - CORRIGÉ pour récupérer le score avec pénalités
+    // Synchronisation avec le serveur (moins fréquente) - pour récupérer le score avec pénalités
     const syncWithServer = async () => {
       if (isServerSyncInProgress || !isMounted) return;
       
       const now = Date.now();
-      // Éviter les syncs trop rapprochées (minimum 3 secondes entre les syncs pour le test)
+      // Éviter les syncs trop rapprochées 
       if (lastServerSync && (now - lastServerSync) < 3000) {
         return;
       }
@@ -627,7 +627,7 @@ export const EscapeGame: React.FC = () => {
         isServerSyncInProgress = true;
         lastServerSync = now;
         
-        // CORRECTION : Utiliser syncTimer au lieu de getCurrentTime pour récupérer le score avec pénalités
+        // Utiliser syncTimer au lieu de getCurrentTime pour récupérer le score avec pénalités
         // Obtenir le temps actuel du state de React directement
         const currentElapsedTime = gameState.elapsedTime;
         const response = await gameStateApi.syncTimer(currentElapsedTime);
@@ -668,7 +668,7 @@ export const EscapeGame: React.FC = () => {
           });
 
           // Vérifier si le jeu doit se terminer
-          if (response.elapsedTime >= 3600) { // MAX_GAME_DURATION
+          if (response.elapsedTime >= 3600) { 
             setGameState(prevState => ({
               ...prevState,
               gameCompleted: true
@@ -729,10 +729,10 @@ export const EscapeGame: React.FC = () => {
         console.error('Erreur sync serveur:', error);
         if (error.message?.includes('429') || error.message?.includes('Rate limit') || error.message?.includes('Trop de requêtes')) {
           // Différer la prochaine sync en cas de rate limit - augmenté significativement
-          lastServerSync = now + 120000; // Reporter de 2 minutes pour éviter le spam
+          lastServerSync = now + 120000; 
           console.warn('Rate limit atteint, prochaine sync dans 2 minutes');
         } else if (error.message?.includes('fetch') || error.message?.includes('NetworkError')) {
-          lastServerSync = now + 60000; // Reporter de 1 minute pour erreur réseau
+          lastServerSync = now + 60000;
         }
       } finally {
         isServerSyncInProgress = false;
@@ -761,7 +761,7 @@ export const EscapeGame: React.FC = () => {
     if (!isLoading && !gameState.gameCompleted) {
       const timeoutId = setTimeout(() => {
         saveGameState(gameState).catch(console.error);
-      }, 5000); // Augmenté à 5 secondes pour réduire la fréquence
+      }, 5000); 
 
       return () => clearTimeout(timeoutId);
     }
@@ -770,7 +770,7 @@ export const EscapeGame: React.FC = () => {
   // Gestion globale des états
   useEffect(() => {
     if (gameState) {
-      // Logique de gestion d'état si nécessaire
+      
     }
   }, [gameState]);
 
@@ -948,7 +948,7 @@ export const EscapeGame: React.FC = () => {
         // Vider complètement l'inventaire service local
         inventoryService.resetInventory();
         
-        // CORRECTION: Forcer la synchronisation avec le serveur pour s'assurer que l'inventaire est vide
+      //Forcer la synchronisation avec le serveur pour s'assurer que l'inventaire est vide
         try {
           await inventoryService.initializeInventory();
         } catch (error) {
@@ -963,7 +963,7 @@ export const EscapeGame: React.FC = () => {
         setShowCodeInput(false);
         setCurrentCodeType('drawer');
         setMessage('Partie réinitialisée avec succès');
-        setTimeout(() => setMessage(''), 1500); // Message disparaît après 1,5 seconde
+        setTimeout(() => setMessage(''), 1500); 
         setCodeErrorMessage('');
         setShowBook(false);
         setShowRiddleContent(false);

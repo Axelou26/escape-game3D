@@ -61,11 +61,11 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
 
   const lastFrameTimeRef = useRef<number>(0);
   
-  // Refs pour le raycasting optimisé avec surbrillance
+  // Refs pour le raycasting 
   const raycasterRef = useRef(new THREE.Raycaster());
   const lastHoveredObjectRef = useRef<THREE.Object3D | null>(null);
   
-  // Cache des objets interactifs pour optimiser le raycasting
+  // Cache des objets interactifs 
   const interactiveObjectsCacheRef = useRef<THREE.Object3D[]>([]);
   const cacheInvalidatedRef = useRef<boolean>(true);
 
@@ -89,7 +89,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     wallGeometry: new THREE.CylinderGeometry(10, 10, 4, 32, 1, true)
   }), []);
 
-  // Fonction optimisée pour créer des objets interactifs avec surbrillance blanche
+  //  objets interactifs avec surbrillance blanche
   const makeInteractive = useCallback((object: THREE.Object3D, id: string, type: string) => {
     object.userData.interactive = true;
     object.userData.id = id;
@@ -99,13 +99,13 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     cacheInvalidatedRef.current = true;
 
     const outlineMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff, // Blanc pour la surbrillance
+      color: 0xffffff, 
       side: THREE.BackSide,
       transparent: true,
-      opacity: 0, // Démarrer invisible, sera ajusté au survol
-      depthTest: false, // Améliore la visibilité de la surbrillance
+      opacity: 0,
+      depthTest: false,
       depthWrite: false,
-      blending: THREE.NormalBlending // Rendu normal pour contours plus doux
+      blending: THREE.NormalBlending 
     });
 
     // Stocker les matériaux outline pour pouvoir les modifier plus tard
@@ -117,11 +117,11 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
         const clonedOutlineMaterial = outlineMaterial.clone();
         const outlineMesh = new THREE.Mesh(child.geometry, clonedOutlineMaterial);
         
-        // Contour fin et net - juste les bords
+        
         outlineMesh.scale.multiplyScalar(1.015);
         outlineMesh.position.copy(child.position);
         outlineMesh.rotation.copy(child.rotation);
-        outlineMesh.userData.isOutline = true; // Marquer comme contour
+        outlineMesh.userData.isOutline = true; 
         
         parent.add(outlineMesh);
         object.userData.outlineMaterials.push(clonedOutlineMaterial);
@@ -240,11 +240,11 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
   const handleCodeSubmit = useCallback(async (code: string) => {
     try {
       // Valider le code via l'API backend
-      const result = await gameApi.validateCode('final-code', code);
+      const result = await gameApi.validateCode('final-chamber-code', code);
       
       if (result.correct) {
-        // Code correct : +200 points et arrêt du jeu
-        onInteract?.('final-code', 'security', 'enterCode', { isCorrect: true, isGameComplete: true });
+       
+        onInteract?.('final-chamber-code', 'security', 'enterCode', { isCorrect: true, isGameComplete: true });
         
         setArtifactUnlocked(true);
         setShowCodeInput(false);
@@ -257,8 +257,8 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
           onUpdateGameState(updates);
         }
       } else {
-        // Code incorrect : -10 points
-        onInteract?.('final-code', 'security', 'enterCode', { isCorrect: false });
+        
+        onInteract?.('final-chamber-code', 'security', 'enterCode', { isCorrect: false });
         setErrorMessage('Code incorrect');
         setTimeout(() => setErrorMessage(''), 3000);
       }
@@ -284,7 +284,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       navigate('/leaderboard');
     } catch (error) {
       console.error('Erreur lors de la sauvegarde du score final:', error);
-      // Naviguer quand même vers le leaderboard
+     
       navigate('/leaderboard');
     }
   }, [navigate, onEndGame]);
@@ -329,15 +329,15 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       newPosition.add(direction.multiplyScalar(z));
     }
 
-    // Collision simplifiée et optimisée - vérification seulement de la distance du centre
+    // Collision 
     const distanceFromCenter = Math.sqrt(newPosition.x * newPosition.x + newPosition.z * newPosition.z);
-    if (distanceFromCenter > 9.2) { // Légèrement plus proche du mur pour éviter les clips
+    if (distanceFromCenter > 9.2) { 
       return;
     }
 
     // Appliquer la nouvelle position
     camera.position.copy(newPosition);
-    camera.position.y = 2.5; // Hauteur fixe du joueur
+    camera.position.y = 2.5; 
   }, []);
 
   const updateInteractiveHighlight = useCallback(() => {
@@ -366,7 +366,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       lastHoveredObjectRef.current = null;
     }
 
-    // Optimisation : prendre le premier objet valide directement
+    //  prendre le premier objet valide directement
     if (intersects.length > 0) {
       const intersect = intersects[0];
       let object: THREE.Object3D | null = intersect.object;
@@ -376,7 +376,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
         object = object.parent;
       }
       
-      if (object?.userData.interactive && intersect.distance <= 3.5) { // Distance d'interaction légèrement augmentée
+      if (object?.userData.interactive && intersect.distance <= 3.5) { 
         lastHoveredObjectRef.current = object;
         
         // Contours blancs optimisés
@@ -699,9 +699,8 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
         metalness: 0.2
       });
       const handle = new THREE.Mesh(handleGeometry, handleMaterial);
-      handle.position.z = 0.25; // Déplacer le manche vers l'avant
-      handle.position.y = 0.25; // Monter le manche
-      torchGroup.add(handle);
+      handle.position.z = 0.25; 
+      handle.position.y = 0.25;
 
      
 
@@ -955,7 +954,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     scene.add(carpet);
 
     // Éclairage mystique
-    const ambientLight = new THREE.AmbientLight(0x666666, 0.8); // Lumière ambiante plus forte et plus claire
+    const ambientLight = new THREE.AmbientLight(0x666666, 0.8); 
     scene.add(ambientLight);
     
     // Ajout d'une hémisphère light pour un éclairage plus naturel
@@ -964,7 +963,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
 
     // Lumières focalisées
     const createFocusLight = (position: THREE.Vector3, target: THREE.Vector3, color: number = 0x3366ff) => {
-      const light = new THREE.SpotLight(color, 2.0); // Intensité encore plus forte
+      const light = new THREE.SpotLight(color, 2.0); 
       light.position.copy(position);
       light.target.position.copy(target);
       light.angle = Math.PI / 3; 
@@ -1093,20 +1092,20 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       const deltaTime = now - (lastFrameTimeRef.current || now);
       lastFrameTimeRef.current = now;
 
-      // Optimisation: permettre un frame rate plus élevé pour un mouvement plus fluide
-      if (deltaTime < 12) { // Environ 83 FPS max au lieu de 60 FPS
+     // permettre un frame rate plus élevé pour un mouvement plus fluide
+      if (deltaTime < 12) { 
         animationFrameRef.current = requestAnimationFrame(animate);
         return;
       }
       
       if (controlsRef.current?.isLocked) {
-        const speed = 0.25 * (deltaTime / 16.67); // Augmentation de la vitesse de 0.15 à 0.25
+        const speed = 0.25 * (deltaTime / 16.67); 
         if (moveStateRef.current.forward) movePlayer(0, -speed);
         if (moveStateRef.current.backward) movePlayer(0, speed);
         if (moveStateRef.current.left) movePlayer(-speed, 0);
         if (moveStateRef.current.right) movePlayer(speed, 0);
 
-        // Raycasting optimisé - 1 frame sur 8 pour améliorer les performances
+        // Raycasting  - 1 frame sur 8 
         if (Math.floor(now / 16.67) % 8 === 0) {
           updateInteractiveHighlight();
         }
@@ -1205,12 +1204,11 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fonction de collision simplifiée
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+ //collision
   const checkCollision = useCallback((newPosition: THREE.Vector3): boolean => {
     // Limites de base de la chambre circulaire
     const distance = Math.sqrt(newPosition.x * newPosition.x + newPosition.z * newPosition.z);
-    return distance > 9; // Mur de la chambre circulaire
+    return distance > 9; 
   }, []);
 
   return (

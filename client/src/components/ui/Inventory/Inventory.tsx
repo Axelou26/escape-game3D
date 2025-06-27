@@ -28,13 +28,13 @@ export const Inventory: React.FC<InventoryProps> = ({ items, onUseItem, onItemCl
         return '🔢'; // Énigme mathématique
       case 'riddle-elements':
         return '⚗️'; // Énigme des éléments (chimie)
-      case 'riddle-wisdom':
+      case 'riddle-school':
         return '📚'; // Énigme de sagesse (livre)
-      case 'riddle-shadow':
+      case 'riddle-letter':
         return '🌑'; // Énigme des ombres
       case 'riddle-mirror':
         return '🪞'; // Énigme du miroir
-      case 'riddle-light':
+      case 'riddle-apples':
         return '☀️'; // Énigme de la lumière
       case 'mysterious-book':
         return '📖';
