@@ -84,26 +84,25 @@ escape-game3D/
    - Créer une base de données `escape_game`
    - Configurer les variables d'environnement dans `server/.env`
 
-   mes env :
-   # Configuration du serveur
-PORT=3001
-NODE_ENV=development
+   # mes env :
+      
+      PORT=3001
+      NODE_ENV=development
+      
+      
+      DB_HOST=localhost
+      DB_USER=root
+      DB_PASSWORD=azerty-26
+      DB_NAME=escape_game
+      
+      
+      JWT_SECRET=dfrtyrer_5245_dfseFR
+      JWT_EXPIRES_IN=24h
+      
+      CLIENT_URL=http://localhost:3000
+      
+      API_URL=http://localhost:3001/api
 
-# Configuration de la base de données
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=azerty-26
-DB_NAME=escape_game
-
-# Configuration JWT
-JWT_SECRET=dfrtyrer_5245_dfseFR
-JWT_EXPIRES_IN=24h
-
-# Configuration du client
-CLIENT_URL=http://localhost:3000
-
-# Configuration de l'API
-API_URL=http://localhost:3001/api
 
 4. **Démarrer l'application**
    ```bash
