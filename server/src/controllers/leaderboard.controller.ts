@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import Game from '../models/game.model';
 import User from '../models/user.model';
-import { Op } from 'sequelize';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -20,14 +19,14 @@ export class LeaderboardController {
           isCompleted: true,
           // Vérifier que le gameState indique bien que le joueur est dans la dernière salle
           gameState: {
-            currentRoom: 'secret-chamber' // La salle finale du jeu
+            currentRoom: 'secret-chamber' 
           }
         },
         include: [{
           model: User,
           attributes: ['username'],
           as: 'User',
-          required: true // S'assurer que l'utilisateur existe toujours
+          required: true 
         }],
         order: [
           ['score', 'DESC'],
@@ -37,13 +36,13 @@ export class LeaderboardController {
       });
 
       // Formater les données pour le classement
-      const leaderboard = completedGames.map(game => ({
+      const leaderboard = completedGames.map((game: any) => ({
         username: game.User?.username || 'Joueur Anonyme',
         score: game.score,
         completionTime: game.currentElapsedTime
       }));
 
-      // S'assurer que la réponse est bien en JSON
+    
       res.setHeader('Content-Type', 'application/json');
       res.json({
         status: 'success',
@@ -51,7 +50,7 @@ export class LeaderboardController {
       });
     } catch (error) {
       console.error('Erreur lors de la récupération du classement:', error);
-      // S'assurer que l'erreur est aussi en JSON
+      
       res.setHeader('Content-Type', 'application/json');
       res.status(500).json({
         status: 'error',
@@ -99,9 +98,19 @@ export class LeaderboardController {
             score,
             currentElapsedTime: completionTime,
             gameState: {
-              ...existingGame.gameState,
+              currentRoom: 'secret-chamber',
+              inventory: (existingGame.gameState as any).inventory || [],
               score,
-              elapsedTime: completionTime
+              elapsedTime: completionTime,
+              microscopeEnigmeResolved: true,
+              periodicTableUnlocked: true,
+              unlockedRooms: ['library', 'laboratory', 'secret-chamber'],
+              computerUnlocked: true,
+              gameCompleted: true,
+              artifactUnlocked: true,
+              hintsUsed: (existingGame.gameState as any).hintsUsed || 0,
+              attemptsCount: (existingGame.gameState as any).attemptsCount || 0,
+              solvedPuzzles: (existingGame.gameState as any).solvedPuzzles || []
             }
           });
         }
@@ -117,7 +126,16 @@ export class LeaderboardController {
             currentRoom: 'secret-chamber',
             inventory: [],
             score,
-            elapsedTime: completionTime
+            elapsedTime: completionTime,
+            microscopeEnigmeResolved: true,
+            periodicTableUnlocked: true,
+            unlockedRooms: ['library', 'laboratory', 'secret-chamber'],
+            computerUnlocked: true,
+            gameCompleted: true,
+            artifactUnlocked: true,
+            hintsUsed: 0,
+            attemptsCount: 0,
+            solvedPuzzles: []
           }
         });
       }

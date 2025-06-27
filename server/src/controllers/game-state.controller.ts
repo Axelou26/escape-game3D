@@ -17,12 +17,15 @@ interface GameStateData {
   inventory: InventoryItem[];
   score: number;
   elapsedTime: number;
-  microscopeEnigmeResolved?: boolean;
+  microscopeEnigmeResolved: boolean;
   periodicTableUnlocked?: boolean;
-  unlockedRooms?: string[];
+  unlockedRooms: string[];
   computerUnlocked?: boolean;
   gameCompleted?: boolean;
   artifactUnlocked?: boolean;
+  hintsUsed?: number;
+  attemptsCount?: number;
+  solvedPuzzles: string[];
 }
 
 // Utilitaire pour traiter le contenu JSON de manière sécurisée

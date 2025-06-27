@@ -28,7 +28,16 @@ export const gameController = {
           currentRoom: 'library',
           inventory: [],
           score: 1000,
-          elapsedTime: 0
+          elapsedTime: 0,
+          microscopeEnigmeResolved: false,
+          periodicTableUnlocked: false,
+          unlockedRooms: ['library'],
+          computerUnlocked: false,
+          gameCompleted: false,
+          artifactUnlocked: false,
+          hintsUsed: 0,
+          attemptsCount: 0,
+          solvedPuzzles: []
         }
       });
 

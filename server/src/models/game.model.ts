@@ -1,4 +1,4 @@
-import { Model, DataTypes } from 'sequelize';
+import { Model, DataTypes, Optional } from 'sequelize';
 import { sequelize } from './sequelize';
 import User from './user.model';
 
@@ -14,9 +14,30 @@ interface GameState {
   inventory: InventoryItem[];
   score: number;
   elapsedTime: number;
+  microscopeEnigmeResolved: boolean;
+  periodicTableUnlocked?: boolean;
+  unlockedRooms: string[];
+  computerUnlocked?: boolean;
+  gameCompleted?: boolean;
+  artifactUnlocked?: boolean;
+  hintsUsed?: number;
+  attemptsCount?: number;
+  solvedPuzzles: string[];
 }
 
-class Game extends Model {
+interface GameAttributes {
+  id: number;
+  userId: number;
+  startTime: Date;
+  score: number;
+  currentElapsedTime: number;
+  isCompleted: boolean;
+  gameState: GameState;
+}
+
+interface GameCreationAttributes extends Optional<GameAttributes, 'id'> {}
+
+class Game extends Model<GameAttributes, GameCreationAttributes> implements GameAttributes {
   public id!: number;
   public userId!: number;
   public startTime!: Date;
@@ -24,8 +45,8 @@ class Game extends Model {
   public currentElapsedTime!: number;
   public isCompleted!: boolean;
   public gameState!: GameState;
-  public User?: User;
-  public ScoreEvents?: any[]; // Ajout de la propriété ScoreEvents
+  public User?: any;
+  public ScoreEvents?: any[];
 }
 
 Game.init({
@@ -64,7 +85,35 @@ Game.init({
       currentRoom: 'library',
       inventory: [],
       score: 1000,
-      elapsedTime: 0
+      elapsedTime: 0,
+      microscopeEnigmeResolved: false,
+      periodicTableUnlocked: false,
+      unlockedRooms: ['library'],
+      computerUnlocked: false,
+      gameCompleted: false,
+      artifactUnlocked: false,
+      hintsUsed: 0,
+      attemptsCount: 0,
+      solvedPuzzles: []
+    },
+    set(value: any) {
+      // Normaliser et initialiser les propriétés manquantes
+      const normalizedValue = {
+        currentRoom: value.currentRoom || 'library',
+        inventory: Array.isArray(value.inventory) ? value.inventory : [],
+        score: typeof value.score === 'number' ? value.score : 1000,
+        elapsedTime: typeof value.elapsedTime === 'number' ? value.elapsedTime : 0,
+        microscopeEnigmeResolved: typeof value.microscopeEnigmeResolved === 'boolean' ? value.microscopeEnigmeResolved : false,
+        periodicTableUnlocked: typeof value.periodicTableUnlocked === 'boolean' ? value.periodicTableUnlocked : false,
+        unlockedRooms: Array.isArray(value.unlockedRooms) ? value.unlockedRooms : ['library'],
+        computerUnlocked: typeof value.computerUnlocked === 'boolean' ? value.computerUnlocked : false,
+        gameCompleted: typeof value.gameCompleted === 'boolean' ? value.gameCompleted : false,
+        artifactUnlocked: typeof value.artifactUnlocked === 'boolean' ? value.artifactUnlocked : false,
+        hintsUsed: typeof value.hintsUsed === 'number' ? value.hintsUsed : 0,
+        attemptsCount: typeof value.attemptsCount === 'number' ? value.attemptsCount : 0,
+        solvedPuzzles: Array.isArray(value.solvedPuzzles) ? value.solvedPuzzles : []
+      };
+      this.setDataValue('gameState', normalizedValue);
     },
     validate: {
       isValidGameState(value: GameState) {

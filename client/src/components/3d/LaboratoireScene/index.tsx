@@ -8,7 +8,7 @@ import { CodeInput } from '../../ui/CodeInput/CodeInput';
 import { handlePointerLockErrors } from '../../../utils/errorHandler';
 import { gameApi } from '../../../services/gameApi';
 
-// Géométries réutilisables pour optimiser les performances
+// Géométries réutilisables 
 const sharedGeometries = {
   box: new THREE.BoxGeometry(1, 1, 1),
   cylinder: new THREE.CylinderGeometry(1, 1, 1, 8),
@@ -18,7 +18,7 @@ const sharedGeometries = {
   largeCylinder: new THREE.CylinderGeometry(1, 1, 1, 12)
 };
 
-// Matériaux réutilisables pour optimiser les performances
+// Matériaux réutilisables 
 const sharedMaterials = {
   metal: new THREE.MeshStandardMaterial({
     color: 0x666666,
@@ -94,7 +94,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [codeErrorMessage, setCodeErrorMessage] = useState<string>('');
   
-  // Refs pour le raycasting optimisé avec surbrillance
+  // Refs pour le raycasting 
   const raycasterRef = useRef(new THREE.Raycaster());
   const lastHoveredObjectRef = useRef<THREE.Object3D | null>(null);
 
@@ -145,7 +145,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
           microscopeEnigmeResolved: false 
         });
       }
-    }, 50); // Debounce de 50ms
+    }, 50);
 
     return () => clearTimeout(timeoutId);
   }, [periodicTableUnlocked, onUpdateGameState]);
@@ -166,7 +166,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     }
   }, [periodicTableUnlocked]);
 
-  // Optimisation de gameStateRef - mise à jour moins fréquente
+  //  gameStateRef
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       const currentGameState: GameState = {
@@ -182,7 +182,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         artifactUnlocked: false
       };
       gameStateRef.current = currentGameState;
-    }, 100); // Debounce de 100ms
+    }, 100); 
 
     return () => clearTimeout(timeoutId);
   }, [periodicTableUnlocked]);
@@ -190,7 +190,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
   // Vérification de la séquence de couleurs
   const checkColorSequence = useCallback(async (beakerId: string) => {
     try {
-      // Vérifier si la séquence a déjà été complétée
+    
       if (labStateRef.current.beakerSequenceCompleted) {
         onInteract('sequence-completed', 'message', 'examine', 'Vous avez déjà résolu la séquence des béchers.');
         return;
@@ -221,14 +221,14 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         const validationResult = await gameApi.validateCode('beaker-sequence', sequenceString);
 
         if (validationResult.correct) {
-          // Séquence complète et correcte
+       
           setSelectedBeakers([]);
           selectedBeakersRef.current = [];
           
-          // Marquer la séquence comme complétée pour éviter les répétitions
+         
           labStateRef.current.beakerSequenceCompleted = true;
           
-          // Donner les points pour la séquence réussie
+         
           onInteract('beaker-sequence', 'laboratory', 'checkBeakerSequence', { isCorrect: true });
           
           // Mettre à jour l'état global et la ref
@@ -256,7 +256,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
           onInteract('beaker-sequence', 'laboratory', 'checkBeakerSequence', { isCorrect: false });
         }
       }
-      // Si la séquence n'est pas complète, on continue sans valider ni pénaliser
+     
       
     } catch (error) {
       console.error('Erreur lors de la vérification de la séquence:', error);
@@ -371,9 +371,9 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
               break;
             }
             
-            // Vérifier si le bécher est déjà dans la séquence (pour permettre reset)
+            // Vérifier si le bécher est déjà dans la séquence 
             if (selectedBeakersRef.current.includes(object.userData.id)) {
-              // Double-clic sur un bécher déjà sélectionné = reset de la séquence
+             
               setSelectedBeakers([]);
               selectedBeakersRef.current = [];
               onInteract('sequence-reset', 'message', 'examine', 'Séquence réinitialisée. Recommencez la sélection.');
@@ -399,7 +399,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
             if (!periodicTableStateRef.current.globalUnlocked && !periodicTableUnlocked) {
               onInteract('periodic-table-locked', 'message', 'examine', 'Ce tableau semble verrouillé, il y a peut-être quelque chose à faire avec les béchers.');
             } else {
-              // CORRECTION: Vérifier d'abord dans l'inventaire actuel si l'énigme existe déjà
+             
               const currentInventory = inventory || [];
               const riddleAlreadyExists = currentInventory.some(item => 
                 (typeof item === 'string' ? item : item.id) === 'riddle-elements'
@@ -409,17 +409,16 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
                 // L'énigme n'existe pas dans l'inventaire ET n'a pas été marquée comme collectée localement
                 onInteract('riddle-elements', 'riddle', 'add_to_inventory', { riddleId: 'riddle-elements' });
                 
-                // Message de confirmation
+             
                 onInteract('periodic-table-message', 'message', 'examine', 'Une énigme mystérieuse est apparue sur le tableau périodique ! Elle a été ajoutée à votre inventaire.');
                 
-                // Marquer l'énigme comme récupérée localement
+               
                 periodicTableStateRef.current = {
                   isLocked: false,
                   globalUnlocked: true,
                   riddleCollected: true
                 };
-              } else {
-                // L'énigme existe déjà ou a été marquée comme collectée
+              } else { 
                 onInteract('periodic-table-message', 'message', 'examine', 'Vous avez déjà récupéré l\'énigme du tableau périodique.');
               }
             }
@@ -467,13 +466,13 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     }
 
     const outlineMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff, // Blanc pour la surbrillance
+      color: 0xffffff, 
       side: THREE.BackSide,
       transparent: true,
-      opacity: 0, // Démarrer invisible, sera ajusté au survol
-      depthTest: false, // Améliore la visibilité de la surbrillance
+      opacity: 0,
+      depthTest: false, 
       depthWrite: false,
-      blending: THREE.NormalBlending // Rendu normal pour contours plus doux
+      blending: THREE.NormalBlending 
     });
 
     // Stocker les matériaux outline pour pouvoir les modifier plus tard
@@ -484,11 +483,11 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         const clonedOutlineMaterial = outlineMaterial.clone();
         const outlineMesh = new THREE.Mesh(child.geometry, clonedOutlineMaterial);
         
-        // Contour fin et net - juste les bords
+        
         outlineMesh.scale.multiplyScalar(1.015);
         outlineMesh.position.copy(child.position);
         outlineMesh.rotation.copy(child.rotation);
-        outlineMesh.userData.isOutline = true; // Marquer comme contour
+        outlineMesh.userData.isOutline = true; 
         
         parent.add(outlineMesh);
         object.userData.outlineMaterials.push(clonedOutlineMaterial);
@@ -523,22 +522,26 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     }
 
     try {
-          if (rendererRef.current) {
-      return rendererRef.current;
-    }
+      if (rendererRef.current) {
+        return rendererRef.current;
+      }
 
-          const renderer = new THREE.WebGLRenderer({
-      antialias: false, // Désactiver l'antialiasing pour de meilleures performances
-      alpha: true,
-      powerPreference: "high-performance" // Préférer les performances à l'économie d'énergie
-    });
+      const renderer = new THREE.WebGLRenderer({
+        antialias: false, 
+        alpha: true,
+        powerPreference: "high-performance" 
+      });
 
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = false; // Désactiver les ombres pour améliorer les FPS
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limiter la résolution pour les écrans haute résolution
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = false; 
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
+      
+      // CRUCIAL: Ajouter le renderer au DOM
       mountRef.current.appendChild(renderer.domElement);
+      
       return renderer;
     } catch (error) {
+      console.error('Erreur lors de la création du renderer:', error);
       return null;
     }
   }, []);
@@ -611,19 +614,6 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       isDisposedRef.current = true;
       isInitializedRef.current = false;
     };
-  }, []);
-
-  // Effet principal pour l'initialisation de la scène
-  useEffect(() => {
-    if (!mountRef.current || !isMountedRef.current || isDisposedRef.current) {
-      return;
-    }
-
-    if (isInitializedRef.current) {
-      return;
-    }
-
-    initScene();
   }, []);
 
   // Initialisation du laboratoire
@@ -879,21 +869,21 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     // Création immédiate du laboratoire
     createLaboratory();
 
-    // Éclairage optimisé
+    // Éclairage 
     const createLighting = () => {
-      // Lumière ambiante plus forte pour compenser la réduction des lumières directionnelles
+     
       const ambient = new THREE.AmbientLight(0xffffff, 0.7);
       scene.add(ambient);
 
-      // Réduction du nombre de lumières - seulement les principales
+      //nombre de lumières 
       const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
       mainLight.position.set(0, 10, 0);
-      mainLight.castShadow = false; // Désactiver les ombres pour améliorer les performances
+      mainLight.castShadow = false;
       scene.add(mainLight);
 
-      // Quelques lumières fluorescentes stratégiques seulement
+    
       const createCeilingLight = (x: number, z: number) => {
-        // Utiliser DirectionalLight au lieu de RectAreaLight pour de meilleures performances
+        
         const light = new THREE.DirectionalLight(0xffffff, 0.3);
         light.position.set(x, 4.8, z);
         light.target.position.set(x, 0, z);
@@ -909,7 +899,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         scene.add(fixture);
       };
 
-      // Réduction du nombre de lumières - seulement 4 au lieu de 16
+      // nombre de lumières 
       createCeilingLight(-4, -4);
       createCeilingLight(4, -4);
       createCeilingLight(-4, 4);
@@ -972,7 +962,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
 
     createCollisionBoxes();
 
-    // Fonction hautement optimisée pour mettre à jour la surbrillance
+    // surbrillance
     const updateInteractiveHighlight = () => {
       if (!cameraRef.current || !sceneRef.current) return;
 
@@ -1020,7 +1010,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
               outlineMaterial.color.setHex(0xffffff); 
             });
           }
-          break; // Prendre seulement le premier objet interactif trouvé
+          break; 
         }
       }
     };
@@ -1093,7 +1083,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
           beakerGroup.add(liquid);
 
           // Positionnement des béchers en arc de cercle autour du microscope
-          const angle = (index * Math.PI) / 3; // Répartition sur un demi-cercle
+          const angle = (index * Math.PI) / 3; 
           const radius = 0.4;
           beakerGroup.position.set(
             0.5 + radius * Math.cos(angle),
@@ -1327,7 +1317,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       // Création d'une rangée de casiers
       const createLockerRow = () => {
         const lockerWidth = 1;
-        const lockerPositions = [-6, -2, 2]; // Nouvelles positions pour éviter la table
+        const lockerPositions = [-6, -2, 2]; 
 
         lockerPositions.forEach((z, index) => {
           const locker = new THREE.Group();
@@ -1337,7 +1327,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
             new THREE.BoxGeometry(lockerWidth, 2, 0.5),
             new THREE.MeshStandardMaterial({ 
               color: 0x666666,
-              emissiveIntensity: index === 1 ? 0.1 : 0 // Réduction de l'intensité pour le casier interactif
+              emissiveIntensity: index === 1 ? 0.1 : 0 
             })
           );
           locker.add(body);
@@ -1389,17 +1379,17 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
                 const outlineMaterial = new THREE.MeshBasicMaterial({
                   color: 0xffffff,
                   transparent: true,
-                  opacity: 0.15, // Réduction de l'opacité de la surbrillance
+                  opacity: 0.15, 
                   side: THREE.BackSide
                 });
                 const outlineMesh = new THREE.Mesh(child.geometry, outlineMaterial);
-                outlineMesh.scale.multiplyScalar(1.02); // Réduction de la taille de la surbrillance
+                outlineMesh.scale.multiplyScalar(1.02); 
                 outlineMesh.userData.isOutline = true;
                 child.add(outlineMesh);
 
                 if (child.material instanceof THREE.MeshStandardMaterial) {
                   child.material.emissive = new THREE.Color(0xffffff);
-                  child.material.emissiveIntensity = 0.1; // Réduction de l'intensité d'émission
+                  child.material.emissiveIntensity = 0.1; 
                 }
               }
             });
@@ -1492,7 +1482,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     if (handleKeyUpRef.current) window.addEventListener('keyup', handleKeyUpRef.current);
     if (handleClickRef.current) window.addEventListener('click', handleClickRef.current);
 
-    // Animation hautement optimisée pour de meilleures performances
+    // Animation 
     let fpsLimit = 60;
     let fpsInterval = 1000 / fpsLimit;
     let then = performance.now();
@@ -1511,14 +1501,14 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         
         movePlayer();
         
-        // Optimisation drastique du raycasting - seulement 10 fois par seconde
+        //raycasting - seulement 10 fois par seconde
         if (now - lastRaycastTime > 100) { // 100ms = 10 fois/seconde
           updateInteractiveHighlight();
           lastRaycastTime = now;
         }
         
         if (rendererRef.current && cameraRef.current && sceneRef.current) {
-          // Optimisation du rendu : utiliser un viewport plus petit si nécessaire
+          //  utiliser un viewport plus petit si nécessaire
           rendererRef.current.render(sceneRef.current, cameraRef.current);
         }
         
@@ -1532,7 +1522,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
 
     // Création des meubles scientifiques
     const createLabFurniture = () => {
-      // Création d'une étagère avec équipements optimisée
+      // Création d'une étagère avec équipements 
       const createEquipmentShelf = (position: THREE.Vector3, rotation: number) => {
         const shelf = new THREE.Group();
 
@@ -1550,17 +1540,17 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
           sharedMaterials.metalDark
         ];
 
-        // Étagères horizontales - réduire le nombre pour optimiser
-        for (let y = 0; y < 3; y++) { // Réduit de 4 à 3 étagères
+        // Étagères horizontales
+        for (let y = 0; y < 3; y++) {
           const board = new THREE.Mesh(
             sharedGeometries.box.clone().scale(2, 0.05, 0.4),
             sharedMaterials.metal
           );
-          board.position.y = -1 + y * 0.8; // Espacement ajusté
+          board.position.y = -1 + y * 0.8; 
           shelf.add(board);
 
-          // Réduire le nombre d'équipements par étagère
-          for (let x = -0.6; x <= 0.6; x += 0.6) { // Réduit de 5 à 3 équipements par étagère
+          //  nombre d'équipements par étagère
+          for (let x = -0.6; x <= 0.6; x += 0.6) { 
             const equipmentType = Math.floor(Math.random() * 3);
             let equipment;
 
@@ -1630,7 +1620,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
           });
         });
 
-        // Instruments sur l'établi optimisés
+        // Instruments sur l'établi 
         const instruments = [
           { 
             isBox: true,
@@ -1685,14 +1675,14 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       const createFumeHood = (position: THREE.Vector3, rotation: number) => {
         const fumeHood = new THREE.Group();
 
-        // Structure principale optimisée
+        // Structure principale 
         const body = new THREE.Mesh(
           sharedGeometries.box.clone().scale(1.5, 2, 0.8),
           sharedMaterials.wall
         );
         fumeHood.add(body);
 
-        // Vitre de protection optimisée
+        // Vitre de protection 
         const glass = new THREE.Mesh(
           sharedGeometries.plane.clone().scale(1.4, 1, 1),
           sharedMaterials.glassClear
@@ -1799,7 +1789,20 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       isDisposedRef.current = true;
       isInitializedRef.current = false;
     };
-  }, [initRenderer, onInteract, onUpdateGameState, handleInteraction, checkCollision]);
+  }, [initRenderer, onInteract, onUpdateGameState]);
+
+  // Effet principal pour l'initialisation de la scène
+  useEffect(() => {
+    if (!mountRef.current || !isMountedRef.current || isDisposedRef.current) {
+      return;
+    }
+
+    if (isInitializedRef.current) {
+      return;
+    }
+
+    initScene();
+  }, [initScene]);
 
   // Gérer la soumission du code
   const handleCodeSubmit = useCallback(async (code: string) => {
@@ -1818,7 +1821,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         // Donner la clé en cristal
         onInteract('crystal-key', 'key', 'add_key_to_inventory');
         
-        // Messages dans le jeu avec un type spécifique
+       
         onInteract('computer-message', 'notification', 'display', 'Code correct ! Accès système autorisé.');
         onInteract('computer-message', 'notification', 'display', 'Déverrouillage du casier sécurisé en cours...');
         setTimeout(() => {
@@ -1828,7 +1831,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         // Donner les points pour le code incorrect - le serveur gère les pénalités
         onInteract('computer-code', 'security', 'enterCode', { isCorrect: false });
         
-        // Afficher le message d'erreur du serveur s'il existe
+        
         const errorMessage = validationResult.message || 'Code incorrect';
         setCodeErrorMessage(errorMessage);
         setTimeout(() => setCodeErrorMessage(''), 3000);
@@ -1880,7 +1883,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     </>
   );
 }, (prevProps, nextProps) => {
-  // Optimisation des re-rendus - seulement si les props importantes n'ont pas changé
+  // Optimisation des re-rendus
   return (
     prevProps.periodicTableUnlocked === nextProps.periodicTableUnlocked &&
     prevProps.onInteract === nextProps.onInteract &&
