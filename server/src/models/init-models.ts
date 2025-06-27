@@ -6,7 +6,30 @@ import ScoreEvent from './score-event.model';
 import CodePuzzle from './code-puzzle.model';
 import { sequelize } from './sequelize';
 
+async function cleanInvalidDatetimeData() {
+  try {
+    console.log('Nettoyage des données datetime invalides...');
+    
+    // Corriger les valeurs datetime invalides dans score_events
+    await sequelize.query(`
+      UPDATE score_events 
+      SET timestamp = NOW() 
+      WHERE timestamp = '0000-00-00 00:00:00' 
+         OR timestamp IS NULL 
+         OR timestamp = '0000-00-00'
+    `);
+    
+    console.log('Nettoyage des données datetime terminé.');
+  } catch (error) {
+    console.error('Erreur lors du nettoyage des données datetime:', error);
+    // Ne pas arrêter le processus, continuer avec la synchronisation
+  }
+}
+
 export async function initModels() {
+  // Nettoyer les données invalides avant la synchronisation
+  await cleanInvalidDatetimeData();
+
   // Définir les associations
   Game.belongsTo(User, {
     foreignKey: 'userId',
