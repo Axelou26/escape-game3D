@@ -1,60 +1,43 @@
-import { sequelize } from '../models/sequelize';
+import { QueryInterface, DataTypes } from 'sequelize';
 
-export async function fixInvalidDatetime() {
+export async function up(queryInterface: QueryInterface): Promise<void> {
   try {
-    console.log('Migration: Correction des valeurs datetime invalides...');
+    console.log('Correction des valeurs datetime invalides dans score_events...');
     
-    // Vérifier si la table score_events existe
-    const [tables] = await sequelize.query(`
-      SELECT TABLE_NAME 
-      FROM INFORMATION_SCHEMA.TABLES 
-      WHERE TABLE_SCHEMA = DATABASE() 
-      AND TABLE_NAME = 'score_events'
-    `);
-    
-    if (tables.length === 0) {
-      console.log('Table score_events non trouvée, migration ignorée.');
-      return;
-    }
-    
-    // Mettre à jour toutes les valeurs datetime invalides
-    const [result] = await sequelize.query(`
+    // Mettre à jour les valeurs invalides '0000-00-00 00:00:00' avec la date actuelle
+    await queryInterface.sequelize.query(`
       UPDATE score_events 
-      SET timestamp = COALESCE(created_at, NOW()) 
+      SET timestamp = NOW() 
       WHERE timestamp = '0000-00-00 00:00:00' 
          OR timestamp IS NULL 
-         OR timestamp = '0000-00-00'
-         OR timestamp < '1970-01-01 00:00:01'
+         OR timestamp = ''
     `);
-    
-    console.log(`Migration terminée. ${(result as any).affectedRows || 0} lignes mises à jour.`);
-    
-    // Optionnel: Ajouter une contrainte pour éviter les valeurs futures invalides
-    try {
-      await sequelize.query(`
-        ALTER TABLE score_events 
-        MODIFY COLUMN timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-      `);
-      console.log('Contrainte de timestamp mise à jour avec succès.');
-    } catch (constraintError) {
-      console.log('Contrainte de timestamp déjà à jour ou non applicable.');
-    }
-    
+
+    // Mettre à jour created_at et updated_at si nécessaire
+    await queryInterface.sequelize.query(`
+      UPDATE score_events 
+      SET created_at = NOW() 
+      WHERE created_at = '0000-00-00 00:00:00' 
+         OR created_at IS NULL 
+         OR created_at = ''
+    `);
+
+    await queryInterface.sequelize.query(`
+      UPDATE score_events 
+      SET updated_at = NOW() 
+      WHERE updated_at = '0000-00-00 00:00:00' 
+         OR updated_at IS NULL 
+         OR updated_at = ''
+    `);
+
+    console.log('Valeurs datetime invalides corrigées avec succès.');
   } catch (error) {
-    console.error('Erreur durant la migration des datetime:', error);
+    console.error('Erreur lors de la correction des valeurs datetime:', error);
     throw error;
   }
 }
 
-// Exécuter la migration si ce fichier est appelé directement
-if (require.main === module) {
-  fixInvalidDatetime()
-    .then(() => {
-      console.log('Migration des datetime terminée avec succès.');
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error('Échec de la migration des datetime:', error);
-      process.exit(1);
-    });
+export async function down(queryInterface: QueryInterface): Promise<void> {
+  // Pas de rollback car on ne peut pas remettre des valeurs invalides
+  console.log('Pas de rollback possible pour cette migration.');
 } 

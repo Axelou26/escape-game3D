@@ -3,48 +3,54 @@ import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
 import { handlePointerLockErrors } from '../../../utils/errorHandler';
 
-// Fonction pour créer des géométries ultra-optimisées (réduction des segments pour les performances)
+// Fonction pour créer des géométries
 const createSharedGeometries = () => ({
   book: new THREE.BoxGeometry(0.3, 0.65, 0.8),
   shelf: new THREE.BoxGeometry(9, 2.8, 1.2),
   wall: new THREE.BoxGeometry(20, 5, 0.5),
-  floor: new THREE.PlaneGeometry(20, 20, 1, 1), // Réduction des segments
+  floor: new THREE.PlaneGeometry(20, 20, 1, 1), 
   drawer: new THREE.BoxGeometry(0.55, 0.15, 0.05),
   chair: new THREE.BoxGeometry(0.6, 0.1, 0.6),
   table: new THREE.BoxGeometry(2.4, 0.08, 1.4),
   panel: new THREE.BoxGeometry(0.03, 0.8, 1.0),
-  cylinder: new THREE.CylinderGeometry(0.04, 0.03, 0.4, 6), // Réduction de 8 à 6 segments
-  sphere: new THREE.SphereGeometry(0.15, 8, 6), // Réduction de 10x10 à 8x6
-  torus: new THREE.TorusGeometry(0.06, 0.015, 8, 16, Math.PI) // Réduction de 16 à 8 segments
+  cylinder: new THREE.CylinderGeometry(0.04, 0.03, 0.4, 6), 
+  sphere: new THREE.SphereGeometry(0.15, 8, 6), 
+  torus: new THREE.TorusGeometry(0.06, 0.015, 8, 16, Math.PI) 
 });
 
-// Fonction pour créer des matériaux ultra-optimisés (MeshLambertMaterial pour de meilleures performances)
+// Fonction pour créer des matériaux avec meilleure réflexion de la lumière
 const createSharedMaterials = () => ({
-  darkWood: new THREE.MeshLambertMaterial({
-    color: 0x2B1810
+  darkWood: new THREE.MeshPhongMaterial({
+    color: 0x4A2D1A, // Bois plus clair
+    shininess: 30
   }),
-  veryDarkWood: new THREE.MeshLambertMaterial({
-    color: 0x1A0F0A
+  veryDarkWood: new THREE.MeshPhongMaterial({
+    color: 0x2D1B10, // Légèrement éclairci
+    shininess: 20
   }),
-  maroonLeather: new THREE.MeshLambertMaterial({
-    color: 0x8B0000
+  maroonLeather: new THREE.MeshPhongMaterial({
+    color: 0xA52A2A, // Cuir plus lumineux
+    shininess: 60
   }),
-  brass: new THREE.MeshLambertMaterial({
-    color: 0xB87333
+  brass: new THREE.MeshPhongMaterial({
+    color: 0xD4A574, // Laiton plus brillant
+    shininess: 100
   }),
-  gold: new THREE.MeshLambertMaterial({
-    color: 0xDAA520,
-    emissive: 0x332200 // Réduction de l'intensité émissive
+  gold: new THREE.MeshPhongMaterial({
+    color: 0xFFD700, // Or plus éclatant
+    emissive: 0x443300,
+    shininess: 120
   }),
-  wallMaterial: new THREE.MeshLambertMaterial({
-    color: 0x3B2506
+  wallMaterial: new THREE.MeshPhongMaterial({
+    color: 0x5A3608, // Murs plus clairs
+    shininess: 10
   }),
-  // Matériaux supplémentaires pour les livres (optimisés)
-  bookMaterial1: new THREE.MeshLambertMaterial({ color: 0x3A2818 }),
-  bookMaterial2: new THREE.MeshLambertMaterial({ color: 0x2D1B10 }),
-  bookMaterial3: new THREE.MeshLambertMaterial({ color: 0x4A1515 }),
-  bookMaterial4: new THREE.MeshLambertMaterial({ color: 0x1A2A1A }),
-  bookMaterial5: new THREE.MeshLambertMaterial({ color: 0x1A1A2A })
+  // Matériaux supplémentaires pour les livres - plus colorés et visibles
+  bookMaterial1: new THREE.MeshPhongMaterial({ color: 0x654832, shininess: 40 }), // Brun plus clair
+  bookMaterial2: new THREE.MeshPhongMaterial({ color: 0x4A2D18, shininess: 40 }), // Brun foncé
+  bookMaterial3: new THREE.MeshPhongMaterial({ color: 0x722222, shininess: 50 }), // Rouge foncé
+  bookMaterial4: new THREE.MeshPhongMaterial({ color: 0x2A4A2A, shininess: 40 }), // Vert foncé
+  bookMaterial5: new THREE.MeshPhongMaterial({ color: 0x2A2A4A, shininess: 40 })  // Bleu foncé
 });
 
 interface Bibliotheque3DProps {
@@ -89,24 +95,24 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
     isDrawerCodeValidRef.current = isDrawerCodeValid;
   }, [isDrawerCodeValid]);
 
-  // Optimisation avec useMemo pour la scène et la caméra
+  // useMemo pour la scène et la caméra
   const scene = useMemo(() => new THREE.Scene(), []);
   const camera = useMemo(() => new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000), []);
 
-  // Fonction optimisée pour créer des objets interactifs avec surbrillance blanche
+  // Fonction  pour créer des objets interactifs avec surbrillance blanche
   const makeInteractive = (object: THREE.Object3D, id: string, type: string) => {
     object.userData.interactive = true;
     object.userData.id = id;
     object.userData.type = type;
 
     const outlineMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff, // Blanc pour la surbrillance
+      color: 0xffffff, 
       side: THREE.BackSide,
       transparent: true,
-      opacity: 0, // Démarrer invisible, sera ajusté au survol
-      depthTest: false, // Améliore la visibilité de la surbrillance
+      opacity: 0, 
+      depthTest: false, 
       depthWrite: false,
-      blending: THREE.NormalBlending // Rendu normal pour contours plus doux
+      blending: THREE.NormalBlending 
     });
 
     // Stocker les matériaux outline pour pouvoir les modifier plus tard
@@ -117,11 +123,11 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
         const clonedOutlineMaterial = outlineMaterial.clone();
         const outlineMesh = new THREE.Mesh(child.geometry, clonedOutlineMaterial);
         
-        // Contour fin et net - juste les bords
+        
         outlineMesh.scale.multiplyScalar(1.015);
         outlineMesh.position.copy(child.position);
         outlineMesh.rotation.copy(child.rotation);
-        outlineMesh.userData.isOutline = true; // Marquer comme contour
+        outlineMesh.userData.isOutline = true; 
         
         parent.add(outlineMesh);
         object.userData.outlineMaterials.push(clonedOutlineMaterial);
@@ -131,7 +137,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
     if (object instanceof THREE.Group) {
       object.children.forEach((child) => {
         processChild(child, object);
-        // Traiter également les enfants des enfants (pour les groupes imbriqués)
+        // Traiter également les enfants des enfants 
         if (child instanceof THREE.Group) {
           child.children.forEach((grandChild) => {
             processChild(grandChild, child);
@@ -179,7 +185,87 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
 
     // Initialisation de la scène
     sceneRef.current = scene;
-    scene.background = new THREE.Color(0x1a1a1a);
+    scene.background = new THREE.Color(0x404040); // Fond plus lumineux pour une meilleure visibilité
+
+    // SYSTÈME D'ÉCLAIRAGE ÉQUILIBRÉ - Bibliothèque bien éclairée sans être éblouissante
+    
+    // 1. Lumière ambiante principale - Intensité réduite
+    const mainAmbientLight = new THREE.AmbientLight(0x404040, 0.8); // Moins intense
+    scene.add(mainAmbientLight);
+
+    // 2. Lumière directionnelle principale du plafond
+    const mainDirectionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    mainDirectionalLight.position.set(0, 8, 0);
+    mainDirectionalLight.target.position.set(0, 0, 0);
+    scene.add(mainDirectionalLight);
+    scene.add(mainDirectionalLight.target);
+
+    // 3. Lumières latérales réduites
+    const sideLight1 = new THREE.DirectionalLight(0xffffff, 0.4);
+    sideLight1.position.set(10, 6, 0);
+    scene.add(sideLight1);
+
+    const sideLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+    sideLight2.position.set(-10, 6, 0);
+    scene.add(sideLight2);
+
+    // 4. Lumière spécifique pour le mur du fond
+    const backWallLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    backWallLight.position.set(0, 5, -12);
+    backWallLight.target.position.set(0, 2, -10);
+    scene.add(backWallLight);
+    scene.add(backWallLight.target);
+
+    // 5. Lumière ponctuelle supplémentaire pour le mur du fond
+    const backWallPointLight = new THREE.PointLight(0xffdd88, 0.6, 18);
+    backWallPointLight.position.set(0, 3, -8);
+    scene.add(backWallPointLight);
+
+    // 6. Lumière spécifique pour le mur de devant
+    const frontWallLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    frontWallLight.position.set(0, 5, 12);
+    frontWallLight.target.position.set(0, 2, 10);
+    scene.add(frontWallLight);
+    scene.add(frontWallLight.target);
+
+    // 7. Lumière ponctuelle supplémentaire pour le mur de devant
+    const frontWallPointLight = new THREE.PointLight(0xffdd88, 0.5, 16);
+    frontWallPointLight.position.set(0, 3, 8);
+    scene.add(frontWallPointLight);
+
+    // 8. Lumière ponctuelle centrale chaude - Intensité réduite
+    const centerPointLight = new THREE.PointLight(0xffcc88, 0.5, 18);
+    centerPointLight.position.set(0, 4, 0);
+    scene.add(centerPointLight);
+
+    // 9. Lumières d'appoint aux coins - Équilibrées avant/arrière
+    const cornerLights = [
+      { pos: [8, 3, 8], color: 0xffdd99, intensity: 0.5 },   // Devant renforcé
+      { pos: [-8, 3, 8], color: 0xffdd99, intensity: 0.5 },  // Devant renforcé
+      { pos: [8, 3, -8], color: 0xffdd99, intensity: 0.5 },  // Arrière maintenu
+      { pos: [-8, 3, -8], color: 0xffdd99, intensity: 0.5 }  // Arrière maintenu
+    ];
+
+    cornerLights.forEach(({ pos, color, intensity }) => {
+      const cornerLight = new THREE.PointLight(color, intensity, 12);
+      cornerLight.position.set(pos[0], pos[1], pos[2]);
+      scene.add(cornerLight);
+    });
+
+    // 10. Lumière d'appoint pour la zone de lecture
+    const readingLight = new THREE.PointLight(0xffffff, 0.5, 10);
+    readingLight.position.set(0, 2.5, -6);
+    scene.add(readingLight);
+
+    // Lumière ponctuelle secondaire pour équilibrer
+    const cornerPointLight = new THREE.PointLight(0xffcc88, 0.3, 12);
+    cornerPointLight.position.set(-5, 4, -5);
+    scene.add(cornerPointLight);
+
+    // Lumière ponctuelle pour la zone de lecture
+    const readingAreaLight = new THREE.PointLight(0xffeedd, 0.4, 10);
+    readingAreaLight.position.set(2, 3, 8);
+    scene.add(readingAreaLight);
 
     // Configuration ultra-optimisée du renderer
     const renderer = new THREE.WebGLRenderer({ 
@@ -214,26 +300,9 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
     handlePointerLockErrors(controls);
     controlsRef.current = controls;
 
-    // Éclairage ultra-optimisé - minimal pour maximiser les FPS
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); // Augmentation de l'éclairage ambiant
-    scene.add(ambientLight);
+    // L'éclairage est maintenant configuré plus haut dans le code avec le nouvel système
 
-    // Réduction drastique du nombre de lumières pour les performances
-    const mainLights = [
-      { pos: [0, 4, 0], intensity: 0.8, distance: 15 },
-      { pos: [-8, 3, 0], intensity: 0.5, distance: 12 },
-      { pos: [8, 3, 0], intensity: 0.5, distance: 12 }
-    ];
-
-    mainLights.forEach(light => {
-      const pointLight = new THREE.PointLight(0xffffff, light.intensity, light.distance);
-      pointLight.position.set(light.pos[0], light.pos[1], light.pos[2]);
-      // Désactiver les ombres pour toutes les lumières
-      pointLight.castShadow = false;
-      scene.add(pointLight);
-    });
-
-    // Système de collision optimisé
+    // Système de collision 
     const createCollisionBox = (() => {
       const geometry = new THREE.BoxGeometry(1, 1, 1);
       const material = new THREE.MeshBasicMaterial({ 
@@ -254,7 +323,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
       };
     })();
 
-    // Détection de collision optimisée
+    // Détection de collision 
     const checkCollision = (() => {
       const playerBoundingBox = new THREE.Box3();
       const objectBoundingBox = new THREE.Box3();
@@ -272,7 +341,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
       };
     })();
 
-    // Système de mouvement optimisé
+    // Système de mouvement 
     const movePlayer = (() => {
       const movement = new THREE.Vector3();
       const direction = new THREE.Vector3();
@@ -301,7 +370,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
       };
     })();
 
-    // Gestion des événements optimisée
+    // Gestion des événements 
     const handleKeyDown = (event: KeyboardEvent) => {
       switch(event.code) {
         case 'KeyW':
@@ -354,7 +423,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
       handleInteraction();
     };
 
-    // Animation ultra-optimisée pour maximiser les FPS
+    // Animation 
     const animate = (time: number) => {
       if (isDisposedRef.current) return;
 
@@ -370,7 +439,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
         if (moveStateRef.current.left) movePlayer(-speed, 0);
         if (moveStateRef.current.right) movePlayer(speed, 0);
 
-        // Raycasting optimisé - 1 frame sur 5 pour meilleure réactivité de la surbrillance
+        // Raycasting  - 1 frame sur 5e
         if (frameCountRef.current % 5 === 0) {
           raycasterRef.current.setFromCamera(new THREE.Vector2(0, 0), camera);
           
@@ -427,7 +496,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
       frameIdRef.current = requestAnimationFrame(animate);
     };
 
-    // Gestion du redimensionnement ultra-optimisée avec debounce
+    // Gestion du redimensionnement  avec debounce
     let resizeTimeout: NodeJS.Timeout;
     const handleResize = () => {
       clearTimeout(resizeTimeout);
@@ -470,12 +539,12 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
               break;
             case 'mysterious-book':
               if (object.userData.collected) {
-                // Livre déjà collecté, ne rien faire
+                
                 return;
               }
 
               if (!mysteriousBookCreated.current) {
-                // Livre pas encore créé, ne rien faire
+                
                 return;
               }
 
@@ -488,9 +557,9 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
               
               // Retirer SEULEMENT le livre mystérieux de la scène
               if (object.parent) {
-                // Vérifier que c'est bien le livre mystérieux
+              
                 if (object.name === 'mysterious-book-object' || object.userData.id === 'mysterious-book') {
-                  // Faire disparaître immédiatement le livre
+                
                   object.visible = false;
                   
                   // Capturer la référence de l'objet pour éviter les erreurs TypeScript
@@ -507,16 +576,16 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
               }
               break;
             case 'locked-drawer':
-              // Vérifier si le code du tiroir est déjà valide - si oui, ne plus permettre l'interaction
+              
               if (isDrawerCodeValidRef.current) {
-                return; // Ne pas permettre l'interaction si le code est déjà validé
+                return; 
               }
               onInteract(object.userData.id, object.userData.type, 'prompt_code');
               break;
             case 'painting':
-              // Vérifier si le code du tableau est déjà valide - si oui, ne plus permettre l'interaction
+              
               if (isCodeValidRef.current) {
-                return; // Ne pas permettre l'interaction si le code est déjà validé
+                return; 
               }
               onInteract(object.userData.id, object.userData.type, 'prompt_painting_code');
               break;
@@ -578,7 +647,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
           );
           bookshelf.add(mainStructure);
 
-          // Création ultra-optimisée des livres avec matériaux pré-créés
+          // Création  des livres avec matériaux pré-créés
           const createBooks = (sectionStart: number, sectionEnd: number, row: number, shelfXOffset: number, section: number, shelfIndex: number) => {
             const books = new THREE.Group();
             let xPos = sectionStart + 0.2;
@@ -828,9 +897,9 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
         // Vérifier si le tiroir verrouillé existe déjà dans la scène
         const existingDrawer = scene.getObjectByName('locked-drawer-object');
         if (!existingDrawer) {
-          // Tiroir verrouillé
+        
           const drawer = new THREE.Group();
-          drawer.name = 'locked-drawer-object'; // Nom unique pour identification
+          drawer.name = 'locked-drawer-object'; 
           const drawerBody = new THREE.Mesh(
             sharedGeometries.drawer,
             sharedMaterials.darkWood
@@ -901,13 +970,13 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
           );
           chandelier.add(mainStructure);
 
-          // Bougies optimisées - réduction du nombre et de la complexité
-          const candleGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.2, 6); // Réduction des segments
+          // Bougies optimisées
+          const candleGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.2, 6); 
           const candleMaterial = new THREE.MeshLambertMaterial({
             color: 0xFFFDD0
           });
 
-          // Réduction du nombre de bougies de 8 à 4 pour optimiser
+          //  nombre de bougies 
           for (let i = 0; i < 4; i++) {
             const angle = (i * Math.PI * 2) / 4;
             const radius = 0.3;
@@ -920,7 +989,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
             );
             chandelier.add(candle);
 
-            // Lumière réduite - seulement 2 lumières au lieu de 8
+            // Lumière 
             if (i % 2 === 0) {
               const candleLight = new THREE.PointLight(0xFFA500, 0.2, 2);
               candleLight.position.set(
@@ -992,9 +1061,9 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
             
             // Rotation selon le mur (gauche ou droite)
             if (x < 0) {
-              frame.rotation.y = Math.PI / 2;  // Rotation pour le mur gauche
+              frame.rotation.y = Math.PI / 2;  // gauche
             } else {
-              frame.rotation.y = -Math.PI / 2;  // Rotation pour le mur droit
+              frame.rotation.y = -Math.PI / 2;  // droit
             }
 
             if (isInteractive) {
@@ -1004,7 +1073,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
             scene.add(frame);
           };
 
-          // Création des tableaux (seul le premier est interactif)
+          // Création des tableaux 
           createPainting(-9.7, 0, true);    // Tableau interactif sur le mur gauche
           createPainting(9.7, -2, false);   // Tableau non-interactif sur le mur droit
         };
@@ -1368,7 +1437,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
           shade.position.y = 1.6;
           lamp.add(shade);
 
-          // Lumière optimisée
+          // Lumière
           const light = new THREE.PointLight(0xFFA500, 0.3, 3);
           light.position.y = 1.6;
           light.castShadow = false;
