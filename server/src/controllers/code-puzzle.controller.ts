@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import CodePuzzle from '../models/code-puzzle.model';
 import Game from '../models/game.model';
 import ScoreEvent, { ScoreEventType, SCORE_POINTS } from '../models/score-event.model';
-import { AppError } from '../utils/error';
+import { AppError } from '../middleware/errorHandler';
 
 export const codePuzzleController = {
   // Obtenir tous les codes/puzzles d'une salle

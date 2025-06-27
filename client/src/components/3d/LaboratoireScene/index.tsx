@@ -13,7 +13,9 @@ const sharedGeometries = {
   box: new THREE.BoxGeometry(1, 1, 1),
   cylinder: new THREE.CylinderGeometry(1, 1, 1, 8),
   plane: new THREE.PlaneGeometry(1, 1),
-  sphere: new THREE.SphereGeometry(1, 8, 8)
+  sphere: new THREE.SphereGeometry(1, 8, 8),
+  smallCylinder: new THREE.CylinderGeometry(1, 1, 1, 6),
+  largeCylinder: new THREE.CylinderGeometry(1, 1, 1, 12)
 };
 
 // Matériaux réutilisables pour optimiser les performances
@@ -43,6 +45,17 @@ const sharedMaterials = {
     color: 0xcccccc,
     roughness: 0.8,
     metalness: 0.1
+  }),
+  metalDark: new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    roughness: 0.8,
+    metalness: 0.2
+  }),
+  glassClear: new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.3,
+    roughness: 0.1
   })
 };
 
@@ -80,6 +93,10 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
   const [isPeriodicTableLocked, setIsPeriodicTableLocked] = useState(!periodicTableUnlocked);
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [codeErrorMessage, setCodeErrorMessage] = useState<string>('');
+  
+  // Refs pour le raycasting optimisé avec surbrillance
+  const raycasterRef = useRef(new THREE.Raycaster());
+  const lastHoveredObjectRef = useRef<THREE.Object3D | null>(null);
 
   // Ajouter une ref pour stocker l'état persistant du tableau
   const periodicTableStateRef = useRef({
@@ -437,7 +454,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     selectedBeakersRef.current = selectedBeakers;
   }, [selectedBeakers]);
 
-  // Fonction pour rendre un objet interactif avec surbrillance
+  // Fonction optimisée pour créer des objets interactifs avec surbrillance blanche
   const makeInteractive = useCallback((object: THREE.Object3D, id: string, type: string) => {
     object.userData.interactive = true;
     object.userData.id = id;
@@ -449,35 +466,48 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       object.userData.globalUnlocked = periodicTableStateRef.current.globalUnlocked;
     }
 
-    // Ajouter un effet de surbrillance
-    object.traverse((child) => {
-      if (child instanceof THREE.Mesh && !child.userData.isOutline) {
-        // Créer une copie de la géométrie légèrement plus grande
-        const outlineMaterial = new THREE.MeshBasicMaterial({
-          color: 0xffffff,
-          transparent: true,
-          opacity: 0.3,
-          side: THREE.BackSide
-        });
-        const outlineMesh = new THREE.Mesh(child.geometry, outlineMaterial);
-        outlineMesh.scale.multiplyScalar(1.05);
-        outlineMesh.userData.isOutline = true;
-        child.add(outlineMesh);
-
-        // Ajouter une émission légère
-        if (Array.isArray(child.material)) {
-          child.material.forEach(mat => {
-            if (mat instanceof THREE.MeshStandardMaterial) {
-              mat.emissive = new THREE.Color(0xffffff);
-              mat.emissiveIntensity = 0.2;
-            }
-          });
-        } else if (child.material instanceof THREE.MeshStandardMaterial) {
-          child.material.emissive = new THREE.Color(0xffffff);
-          child.material.emissiveIntensity = 0.2;
-        }
-      }
+    const outlineMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff, // Blanc pour la surbrillance
+      side: THREE.BackSide,
+      transparent: true,
+      opacity: 0, // Démarrer invisible, sera ajusté au survol
+      depthTest: false, // Améliore la visibilité de la surbrillance
+      depthWrite: false,
+      blending: THREE.NormalBlending // Rendu normal pour contours plus doux
     });
+
+    // Stocker les matériaux outline pour pouvoir les modifier plus tard
+    object.userData.outlineMaterials = [];
+
+    const processChild = (child: THREE.Object3D, parent: THREE.Object3D) => {
+      if (child instanceof THREE.Mesh && child.geometry) {
+        const clonedOutlineMaterial = outlineMaterial.clone();
+        const outlineMesh = new THREE.Mesh(child.geometry, clonedOutlineMaterial);
+        
+        // Contour fin et net - juste les bords
+        outlineMesh.scale.multiplyScalar(1.015);
+        outlineMesh.position.copy(child.position);
+        outlineMesh.rotation.copy(child.rotation);
+        outlineMesh.userData.isOutline = true; // Marquer comme contour
+        
+        parent.add(outlineMesh);
+        object.userData.outlineMaterials.push(clonedOutlineMaterial);
+      }
+    };
+
+    if (object instanceof THREE.Group) {
+      object.children.forEach((child) => {
+        processChild(child, object);
+        // Traiter également les enfants des enfants (pour les groupes imbriqués)
+        if (child instanceof THREE.Group) {
+          child.children.forEach((grandChild) => {
+            processChild(grandChild, child);
+          });
+        }
+      });
+    } else if (object instanceof THREE.Mesh) {
+      processChild(object, object);
+    }
   }, []);
 
   // Refs pour les gestionnaires d'événements
@@ -497,13 +527,15 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       return rendererRef.current;
     }
 
-      const renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        alpha: true
-      });
+          const renderer = new THREE.WebGLRenderer({
+      antialias: false, // Désactiver l'antialiasing pour de meilleures performances
+      alpha: true,
+      powerPreference: "high-performance" // Préférer les performances à l'économie d'énergie
+    });
 
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.shadowMap.enabled = true;
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = false; // Désactiver les ombres pour améliorer les FPS
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limiter la résolution pour les écrans haute résolution
       mountRef.current.appendChild(renderer.domElement);
       return renderer;
     } catch (error) {
@@ -847,34 +879,41 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     // Création immédiate du laboratoire
     createLaboratory();
 
-    // Éclairage
+    // Éclairage optimisé
     const createLighting = () => {
-      // Lumière ambiante
-      const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+      // Lumière ambiante plus forte pour compenser la réduction des lumières directionnelles
+      const ambient = new THREE.AmbientLight(0xffffff, 0.7);
       scene.add(ambient);
 
-      // Lumières fluorescentes au plafond
-      const createCeilingLight = (x: number, z: number) => {
-        const light = new THREE.RectAreaLight(0xffffff, 1, 2, 0.2);
-        light.position.set(x, 4.8, z);
-        light.rotation.x = -Math.PI / 2;
-        scene.add(light);
+      // Réduction du nombre de lumières - seulement les principales
+      const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      mainLight.position.set(0, 10, 0);
+      mainLight.castShadow = false; // Désactiver les ombres pour améliorer les performances
+      scene.add(mainLight);
 
-        // Boîtier de la lumière
+      // Quelques lumières fluorescentes stratégiques seulement
+      const createCeilingLight = (x: number, z: number) => {
+        // Utiliser DirectionalLight au lieu de RectAreaLight pour de meilleures performances
+        const light = new THREE.DirectionalLight(0xffffff, 0.3);
+        light.position.set(x, 4.8, z);
+        light.target.position.set(x, 0, z);
+        scene.add(light);
+        scene.add(light.target);
+
+        // Boîtier de la lumière réutilisant la géométrie partagée
         const fixture = new THREE.Mesh(
-          new THREE.BoxGeometry(2, 0.1, 0.2),
-          new THREE.MeshStandardMaterial({ color: 0xcccccc })
+          sharedGeometries.box.clone().scale(2, 0.1, 0.2),
+          sharedMaterials.metal
         );
         fixture.position.set(x, 4.9, z);
         scene.add(fixture);
       };
 
-      // Placement des lumières
-      for (let x = -6; x <= 6; x += 4) {
-        for (let z = -6; z <= 6; z += 4) {
-          createCeilingLight(x, z);
-        }
-      }
+      // Réduction du nombre de lumières - seulement 4 au lieu de 16
+      createCeilingLight(-4, -4);
+      createCeilingLight(4, -4);
+      createCeilingLight(-4, 4);
+      createCeilingLight(4, 4);
     };
 
     createLighting();
@@ -933,57 +972,55 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
 
     createCollisionBoxes();
 
-    // Fonction optimisée pour mettre à jour la surbrillance
+    // Fonction hautement optimisée pour mettre à jour la surbrillance
     const updateInteractiveHighlight = () => {
       if (!cameraRef.current || !sceneRef.current) return;
 
-      const raycaster = new THREE.Raycaster();
-      raycaster.setFromCamera(new THREE.Vector2(0, 0), cameraRef.current);
+      raycasterRef.current.setFromCamera(new THREE.Vector2(0, 0), cameraRef.current);
       
-      // Optimisation : limiter la distance de raycasting
-      raycaster.far = 5; // Maximum 5 unités de distance
-      
-      const intersects = raycaster.intersectObjects(sceneRef.current.children, true);
-
-      // Réinitialiser tous les objets interactifs (optimisé)
+      // Créer une liste réduite d'objets interactifs seulement
+      const interactiveObjects: THREE.Object3D[] = [];
       sceneRef.current.traverse((object) => {
-        if (object instanceof THREE.Mesh && !object.userData.isOutline && object.userData.interactive) {
-          const outlineMesh = object.children.find(child => child.userData.isOutline);
-          if (outlineMesh instanceof THREE.Mesh) {
-            (outlineMesh.material as THREE.MeshBasicMaterial).opacity = 0.1; // Réduit pour économiser les ressources
-          }
-          if (object.material instanceof THREE.MeshStandardMaterial) {
-            object.material.emissiveIntensity = 0.05; // Réduit pour économiser les ressources
-          }
+        if (object.userData.interactive && !object.userData.collected && !object.userData.isOutline) {
+          interactiveObjects.push(object);
         }
       });
 
-      // Vérifier seulement les 3 premiers intersects pour optimiser
-      const maxIntersects = Math.min(intersects.length, 3);
-      for (let i = 0; i < maxIntersects; i++) {
-        const intersect = intersects[i];
+      const intersects = raycasterRef.current.intersectObjects(interactiveObjects, true);
+
+      // Réinitialiser l'objet précédemment survolé
+      if (lastHoveredObjectRef.current) {
+        lastHoveredObjectRef.current.userData.outlineMaterials?.forEach((material: THREE.Material) => {
+          (material as THREE.MeshBasicMaterial).opacity = 0; // Masquer la surbrillance
+        });
+        lastHoveredObjectRef.current = null;
+      }
+
+      // Trouver l'objet interactif le plus proche avec vérification de distance
+      for (const intersect of intersects) {
         let object: THREE.Object3D | null = intersect.object;
-        let depth = 0;
         
-        // Limiter la profondeur de recherche comme dans la bibliothèque
-        while (object && !object.userData.interactive && depth < 5) {
+        // Remonter la hiérarchie pour trouver l'objet interactif parent
+        while (object && !object.userData.interactive) {
           object = object.parent;
-          depth++;
         }
         
-        if (object?.userData.interactive) {
-          object.traverse((child) => {
-            if (child instanceof THREE.Mesh && !child.userData.isOutline) {
-              const outlineMesh = child.children.find(c => c.userData.isOutline);
-              if (outlineMesh instanceof THREE.Mesh) {
-                (outlineMesh.material as THREE.MeshBasicMaterial).opacity = 0.25; // Réduit de 0.3 à 0.25
-              }
-              if (child.material instanceof THREE.MeshStandardMaterial) {
-                child.material.emissiveIntensity = 0.15; // Réduit de 0.2 à 0.15
-              }
-            }
-          });
-          break;
+        if (object?.userData.interactive && !object.userData.collected) {
+          // Vérifier la distance - activer seulement si proche (moins de 3 unités)
+          const distance = intersect.distance;
+          const maxInteractionDistance = 3.0;
+          
+          if (distance <= maxInteractionDistance) {
+            lastHoveredObjectRef.current = object;
+            
+            // Contours blancs fins et visibles pour les objets interactifs
+            object.userData.outlineMaterials?.forEach((material: THREE.Material) => {
+              const outlineMaterial = material as THREE.MeshBasicMaterial;
+              outlineMaterial.opacity = 0.2; 
+              outlineMaterial.color.setHex(0xffffff); 
+            });
+          }
+          break; // Prendre seulement le premier objet interactif trouvé
         }
       }
     };
@@ -1036,15 +1073,10 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         beakerColors.forEach((beaker, index) => {
           const beakerGroup = new THREE.Group();
           
-          // Création du bécher en verre
+          // Création du bécher en verre avec géométrie optimisée
           const glass = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.1, 0.08, 0.2, 16),
-            new THREE.MeshStandardMaterial({
-              color: 0xffffff,
-              transparent: true,
-              opacity: 0.4,
-              roughness: 0.1
-            })
+            sharedGeometries.smallCylinder.clone().scale(0.1, 0.2, 0.1),
+            sharedMaterials.glassClear
           );
           beakerGroup.add(glass);
 
@@ -1460,11 +1492,12 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     if (handleKeyUpRef.current) window.addEventListener('keyup', handleKeyUpRef.current);
     if (handleClickRef.current) window.addEventListener('click', handleClickRef.current);
 
-    // Animation optimisée avec limitation de FPS comme dans la bibliothèque
+    // Animation hautement optimisée pour de meilleures performances
     let fpsLimit = 60;
     let fpsInterval = 1000 / fpsLimit;
     let then = performance.now();
     let frameCount = 0;
+    let lastRaycastTime = 0;
     
     const animate = () => {
       if (isDisposedRef.current) return;
@@ -1478,12 +1511,14 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         
         movePlayer();
         
-        // Optimisation du raycasting - mise à jour moins fréquente
-        if (frameCount % 4 === 0) { // Seulement 1 frame sur 4 (15 fois/seconde)
+        // Optimisation drastique du raycasting - seulement 10 fois par seconde
+        if (now - lastRaycastTime > 100) { // 100ms = 10 fois/seconde
           updateInteractiveHighlight();
+          lastRaycastTime = now;
         }
         
         if (rendererRef.current && cameraRef.current && sceneRef.current) {
+          // Optimisation du rendu : utiliser un viewport plus petit si nécessaire
           rendererRef.current.render(sceneRef.current, cameraRef.current);
         }
         
@@ -1497,63 +1532,61 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
 
     // Création des meubles scientifiques
     const createLabFurniture = () => {
-      // Création d'une étagère avec équipements
+      // Création d'une étagère avec équipements optimisée
       const createEquipmentShelf = (position: THREE.Vector3, rotation: number) => {
         const shelf = new THREE.Group();
 
-        // Structure de l'étagère
+        // Structure de l'étagère avec géométrie partagée
         const frame = new THREE.Mesh(
-          new THREE.BoxGeometry(2, 2, 0.4),
-          new THREE.MeshStandardMaterial({ color: 0x666666 })
+          sharedGeometries.box.clone().scale(2, 2, 0.4),
+          sharedMaterials.metal
         );
         shelf.add(frame);
 
-        // Étagères horizontales
-        for (let y = 0; y < 4; y++) {
+        // Matériaux pré-définis pour les équipements
+        const equipMaterials = [
+          sharedMaterials.glassClear,
+          new THREE.MeshStandardMaterial({ color: 0x885555, opacity: 0.8, transparent: true }),
+          sharedMaterials.metalDark
+        ];
+
+        // Étagères horizontales - réduire le nombre pour optimiser
+        for (let y = 0; y < 3; y++) { // Réduit de 4 à 3 étagères
           const board = new THREE.Mesh(
-            new THREE.BoxGeometry(2, 0.05, 0.4),
-            new THREE.MeshStandardMaterial({ color: 0x888888 })
+            sharedGeometries.box.clone().scale(2, 0.05, 0.4),
+            sharedMaterials.metal
           );
-          board.position.y = -1 + y * 0.6;
+          board.position.y = -1 + y * 0.8; // Espacement ajusté
           shelf.add(board);
 
-          // Ajouter des équipements sur chaque étagère
-          for (let x = -0.8; x <= 0.8; x += 0.4) {
-            // Équipements variés (tubes à essai, flacons, etc.)
+          // Réduire le nombre d'équipements par étagère
+          for (let x = -0.6; x <= 0.6; x += 0.6) { // Réduit de 5 à 3 équipements par étagère
             const equipmentType = Math.floor(Math.random() * 3);
             let equipment;
 
             switch (equipmentType) {
               case 0: // Tube à essai
                 equipment = new THREE.Mesh(
-                  new THREE.CylinderGeometry(0.03, 0.03, 0.2, 8),
-                  new THREE.MeshStandardMaterial({
-                    color: 0xcccccc,
-                    transparent: true,
-                    opacity: 0.6
-                  })
+                  sharedGeometries.smallCylinder.clone().scale(0.03, 0.2, 0.03),
+                  equipMaterials[0]
                 );
                 break;
               case 1: // Flacon
                 equipment = new THREE.Mesh(
-                  new THREE.CylinderGeometry(0.05, 0.05, 0.15, 8),
-                  new THREE.MeshStandardMaterial({
-                    color: 0x885555,
-                    transparent: true,
-                    opacity: 0.8
-                  })
+                  sharedGeometries.smallCylinder.clone().scale(0.05, 0.15, 0.05),
+                  equipMaterials[1]
                 );
                 break;
               case 2: // Boîte de Petri
                 equipment = new THREE.Mesh(
-                  new THREE.CylinderGeometry(0.08, 0.08, 0.02, 16),
-                  new THREE.MeshStandardMaterial({ color: 0xaaaaaa })
+                  sharedGeometries.smallCylinder.clone().scale(0.08, 0.02, 0.08),
+                  equipMaterials[2]
                 );
                 break;
             }
 
             if (equipment) {
-              equipment.position.set(x, -0.9 + y * 0.6, 0.1);
+              equipment.position.set(x, -0.8 + y * 0.8, 0.1);
               shelf.add(equipment);
             }
           }
@@ -1597,33 +1630,37 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
           });
         });
 
-        // Instruments sur l'établi
+        // Instruments sur l'établi optimisés
         const instruments = [
           { 
-            geometry: new THREE.BoxGeometry(0.3, 0.2, 0.2),
+            isBox: true,
+            scale: new THREE.Vector3(0.3, 0.2, 0.2),
             position: new THREE.Vector3(-0.6, 0.1, 0),
-            color: 0x666666,
+            material: sharedMaterials.metal,
             name: 'spectrometre'
           },
           {
-            geometry: new THREE.CylinderGeometry(0.1, 0.15, 0.25, 8),
+            isBox: false,
+            scale: new THREE.Vector3(0.1, 0.25, 0.1),
             position: new THREE.Vector3(0, 0.1, 0),
-            color: 0x444444,
+            material: sharedMaterials.metalDark,
             name: 'centrifugeuse'
           },
           {
-            geometry: new THREE.BoxGeometry(0.25, 0.15, 0.2),
+            isBox: true,
+            scale: new THREE.Vector3(0.25, 0.15, 0.2),
             position: new THREE.Vector3(0.6, 0.1, 0),
-            color: 0x555555,
+            material: sharedMaterials.metalDark,
             name: 'balance'
           }
         ];
 
         instruments.forEach(inst => {
-          const instrument = new THREE.Mesh(
-            inst.geometry,
-            new THREE.MeshStandardMaterial({ color: inst.color })
-          );
+          const geometry = inst.isBox ? 
+            sharedGeometries.box.clone().scale(inst.scale.x, inst.scale.y, inst.scale.z) :
+            sharedGeometries.smallCylinder.clone().scale(inst.scale.x, inst.scale.y, inst.scale.z);
+          
+          const instrument = new THREE.Mesh(geometry, inst.material);
           instrument.position.copy(inst.position);
           makeInteractive(instrument, inst.name, 'equipment');
           workbench.add(instrument);
@@ -1648,21 +1685,17 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       const createFumeHood = (position: THREE.Vector3, rotation: number) => {
         const fumeHood = new THREE.Group();
 
-        // Structure principale
+        // Structure principale optimisée
         const body = new THREE.Mesh(
-          new THREE.BoxGeometry(1.5, 2, 0.8),
-          new THREE.MeshStandardMaterial({ color: 0xcccccc })
+          sharedGeometries.box.clone().scale(1.5, 2, 0.8),
+          sharedMaterials.wall
         );
         fumeHood.add(body);
 
-        // Vitre de protection
+        // Vitre de protection optimisée
         const glass = new THREE.Mesh(
-          new THREE.PlaneGeometry(1.4, 1),
-          new THREE.MeshStandardMaterial({
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0.3
-          })
+          sharedGeometries.plane.clone().scale(1.4, 1, 1),
+          sharedMaterials.glassClear
         );
         glass.position.set(0, 0.2, 0.4);
         glass.rotation.x = -Math.PI / 6;
@@ -1749,9 +1782,17 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         });
       }
 
-      // Nettoyage des géométries et matériaux partagés
-      Object.values(sharedGeometries).forEach(geometry => geometry.dispose());
-      Object.values(sharedMaterials).forEach(material => material.dispose());
+      // Nettoyage optimisé des géométries et matériaux partagés
+      Object.values(sharedGeometries).forEach(geometry => {
+        if (geometry && typeof geometry.dispose === 'function') {
+          geometry.dispose();
+        }
+      });
+      Object.values(sharedMaterials).forEach(material => {
+        if (material && typeof material.dispose === 'function') {
+          material.dispose();
+        }
+      });
 
       // Réinitialiser les refs
       collisionObjectsRef.current = [];

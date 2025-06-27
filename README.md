@@ -1,99 +1,168 @@
-# Escape Game
+# Escape Game 3D
 
-Application de jeu d'évasion interactive.
+Jeu d'évasion interactif en 3D avec interface web moderne, développé avec React et Three.js.
 
-## Structure du Projet
+## 🎮 Aperçu
+
+Un jeu d'évasion immersif en 3D où les joueurs naviguent dans différentes salles (bibliothèque, laboratoire, chambre secrète) pour résoudre des énigmes et progresser dans l'aventure.
+
+## 🏗️ Architecture du Projet
 
 ```
-escape-game/
-├── client/                 # Application frontend React
+escape-game3D/
+├── client/                 # Application frontend React + Three.js
 │   ├── public/            # Fichiers statiques
 │   └── src/               # Code source React
 │       ├── components/    # Composants React
+│       │   ├── 3d/       # Scènes 3D (Three.js)
+│       │   ├── ui/       # Interface utilisateur
+│       │   └── game/     # Logique de jeu
 │       ├── pages/         # Pages de l'application
-│       ├── assets/        # Images, styles, etc.
-│       ├── utils/         # Utilitaires et helpers
-│       └── types/         # Types TypeScript
+│       ├── services/      # Services API et gestion d'état
+│       ├── types/         # Types TypeScript
+│       └── utils/         # Utilitaires et helpers
 │
 ├── server/                # Serveur backend Node.js
 │   └── src/              # Code source du serveur
-│       ├── controllers/  # Contrôleurs
-│       ├── models/       # Modèles de données
+│       ├── controllers/  # Contrôleurs API
+│       ├── models/       # Modèles Sequelize
 │       ├── routes/       # Routes API
-│       ├── services/     # Services métier
-│       └── utils/        # Utilitaires
+│       ├── middleware/   # Middleware Express
+│       ├── database/     # Configuration base de données
+│       └── config/       # Configuration serveur
 │
-└── shared/               # Code partagé entre client et serveur
-    └── types/           # Types TypeScript partagés
-
+└── public/               # Assets partagés
 ```
 
-## Prérequis
+## 🛠️ Technologies
 
-- Node.js (v14 ou supérieur)
-- npm ou yarn
-- Base de données (selon votre configuration)
+### Frontend
+- **React 18** - Framework UI
+- **TypeScript** - Typage statique
+- **Three.js** - Graphiques 3D
+- **Material-UI** - Composants UI
+- **React Router** - Navigation
+- **Axios** - Requêtes HTTP
+- **Socket.io** - Communication temps réel
 
-## Installation
+### Backend
+- **Node.js** - Runtime JavaScript
+- **Express** - Framework web
+- **TypeScript** - Typage statique
+- **Sequelize** - ORM pour base de données
+- **MySQL** - Base de données
+- **JWT** - Authentification
+- **Socket.io** - WebSocket
+- **bcrypt** - Hachage des mots de passe
 
-1. Cloner le repository :
+## 🚀 Installation rapide
+
+1. **Cloner le repository**
    ```bash
    git clone [votre-repo]
-   cd escape-game
+   cd escape-game3D
    ```
 
-2. Installer les dépendances :
+2. **Installer les dépendances**
    ```bash
-   # Installation des dépendances racine
+   # Dépendances racine
    npm install
 
-   # Installation des dépendances client
+   # Dépendances client
    cd client
    npm install
+   cd ..
 
-   # Installation des dépendances serveur
-   cd ../server
+   # Dépendances serveur
+   cd server
    npm install
+   cd ..
    ```
 
-3. Configuration :
-   - Copier `.env.example` vers `.env` dans le dossier serveur
-   - Ajuster les variables d'environnement selon vos besoins
+3. **Configuration de la base de données**
+   - Installer MySQL
+   - Créer une base de données `escape_game`
+   - Configurer les variables d'environnement dans `server/.env`
 
-4. Démarrer l'application :
+4. **Démarrer l'application**
    ```bash
-   # Démarrer le serveur de développement
+   # Terminal 1 : Serveur backend
+   cd server
    npm run dev
+
+   # Terminal 2 : Client frontend
+   cd client
+   npm start
    ```
 
-## Scripts Disponibles
+   - Frontend : [http://localhost:3000](http://localhost:3000)
+   - Backend API : [http://localhost:3001](http://localhost:3001)
 
-- `npm run dev` : Démarre l'application en mode développement
-- `npm run build` : Compile l'application pour la production
-- `npm run test` : Lance les tests
-- `npm run lint` : Vérifie le code avec ESLint
+## 📋 Scripts disponibles
 
-## Technologies Utilisées
+### Scripts racine
+- `npm start` - Démarre le client React
+- `npm run build` - Compile le client pour la production
+- `npm test` - Lance les tests du client
 
-- Frontend :
-  - React
-  - TypeScript
-  - Material-UI
+### Scripts serveur (`cd server/`)
+- `npm run dev` - Serveur en mode développement
+- `npm run build` - Compile le serveur TypeScript
+- `npm start` - Démarre le serveur compilé
+- `npm run seed` - Initialise les données de test
 
-- Backend :
-  - Node.js
-  - Express
-  - TypeScript
-  - Sequelize
+### Scripts client (`cd client/`)
+- `npm start` - Serveur de développement React
+- `npm run build` - Build de production
+- `npm test` - Tests unitaires
 
-## Contribution
+## 🎯 Fonctionnalités principales
+
+- **Environnement 3D immersif** avec Three.js
+- **Système d'authentification** sécurisé
+- **Multiples salles** : Bibliothèque, Laboratoire, Chambre secrète
+- **Énigmes interactives** et puzzles
+- **Système d'inventaire** pour collecter des objets
+- **Sauvegarde automatique** de la progression
+- **Tableau des scores** et classements
+- **Interface responsive** adaptée à tous les écrans
+
+## 🗄️ Base de données
+
+Le projet utilise MySQL avec Sequelize ORM. Les principales tables :
+- `users` - Utilisateurs et authentification
+- `games` - Sessions de jeu
+- `riddles` - Énigmes et solutions
+- `code_puzzles` - Puzzles à code
+- `score_events` - Événements de score
+
+## 🔒 Sécurité
+
+- Authentification JWT
+- Hachage bcrypt pour les mots de passe
+- Validation des données d'entrée
+- Protection CORS
+- Rate limiting sur les API
+- Logs de sécurité
+
+## 🧪 Tests
+
+```bash
+# Tests frontend
+cd client && npm test
+
+# Tests backend
+cd server && npm test
+```
+
+## 🤝 Contribution
 
 1. Fork le projet
-2. Créer une branche (`git checkout -b feature/AmazingFeature`)
-3. Commit les changements (`git commit -m 'Add some AmazingFeature'`)
-4. Push vers la branche (`git push origin feature/AmazingFeature`)
+2. Créer une branche feature (`git checkout -b feature/nouvelle-fonctionnalite`)
+3. Commit les changements (`git commit -m 'Ajout: nouvelle fonctionnalité'`)
+4. Push vers la branche (`git push origin feature/nouvelle-fonctionnalite`)
 5. Ouvrir une Pull Request
 
-## Licence
+## 📄 Licence
 
 Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails. 

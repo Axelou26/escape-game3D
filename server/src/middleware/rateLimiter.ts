@@ -24,7 +24,7 @@ const createRateLimiter = (options: {
       return `${req.ip}:${userId}`;
     },
     handler: (req: Request, res: Response) => {
-      console.warn(`🚨 RATE LIMIT EXCEEDED - IP: ${req.ip}, User: ${(req as any).user?.id || 'anonymous'}, Endpoint: ${req.path}`);
+      // Rate limit exceeded - warning removed
       res.status(429).json({
         status: 'error',
         message: options.message,
@@ -115,10 +115,7 @@ export const suspiciousActivityDetector = (threshold: number = 120) => {
     
     // Détecter l'activité suspecte
     if (recentActivity.length > threshold) {
-      console.error(`🚨 ACTIVITÉ SUSPECTE DÉTECTÉE - User: ${key}, Requêtes: ${recentActivity.length} en 5min`);
-      
-      // Logger l'activité suspecte
-      console.error(`Endpoint: ${req.method} ${req.path}, Headers: ${JSON.stringify(req.headers)}`);
+      // Suspicious activity detected - debug info removed
       
       return res.status(429).json({
         status: 'error',
@@ -134,6 +131,6 @@ export const suspiciousActivityDetector = (threshold: number = 120) => {
 // Middleware spécifique pour les requêtes de timer - sécurisé mais fonctionnel
 export const strictTimerRateLimit = createRateLimiter({
   windowMs: 60 * 1000, // 1 minute
-  max: 15, // 15 requêtes par minute (sync toutes les 30s = 2/min + marge pour retry)
+  max: 25, // 25 requêtes par minute (sync toutes les 30s = 2/min + marge importante pour retry)
   message: 'Trop de requêtes de timer. Synchronisation limitée pour éviter la surcharge.'
 }); 

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import Game from '../models/game.model';
 import ScoreEvent, { ScoreEventType, SCORE_POINTS } from '../models/score-event.model';
-import { AppError } from '../utils/error';
+import { AppError } from '../middleware/errorHandler';
 
 export const scoreController = {
   // Ajouter un événement de score

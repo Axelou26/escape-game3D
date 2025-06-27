@@ -1,1 +1,0 @@
-export { EscapeGame } from '../EscapeGame'; 

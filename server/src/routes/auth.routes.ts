@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import { register, login, logout } from '../controllers/auth.controller';
-import { validateRequest } from '../middleware/validateRequest';
+import { handleValidationErrors } from '../middleware/dataValidation';
 
 const router = Router();
 
@@ -14,7 +14,7 @@ const registerValidation = [
   body('password')
     .isLength({ min: 6 })
     .withMessage('Le mot de passe doit contenir au moins 6 caractères'),
-  validateRequest
+  handleValidationErrors
 ];
 
 // Validation pour la connexion
@@ -26,7 +26,7 @@ const loginValidation = [
   body('password')
     .exists()
     .withMessage('Mot de passe requis'),
-  validateRequest
+  handleValidationErrors
 ];
 
 // Routes

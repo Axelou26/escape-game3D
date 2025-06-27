@@ -93,43 +93,53 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
   const scene = useMemo(() => new THREE.Scene(), []);
   const camera = useMemo(() => new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000), []);
 
-  // Fonction optimisée pour créer des objets interactifs
+  // Fonction optimisée pour créer des objets interactifs avec surbrillance blanche
   const makeInteractive = (object: THREE.Object3D, id: string, type: string) => {
     object.userData.interactive = true;
     object.userData.id = id;
     object.userData.type = type;
 
     const outlineMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff, // Blanc pur pour la surbrillance
+      color: 0xffffff, // Blanc pour la surbrillance
       side: THREE.BackSide,
       transparent: true,
-      opacity: 0, // Démarrer à 0, sera mis à 0.6 au survol
+      opacity: 0, // Démarrer invisible, sera ajusté au survol
       depthTest: false, // Améliore la visibilité de la surbrillance
       depthWrite: false,
-      blending: THREE.AdditiveBlending // Meilleur rendu pour la surbrillance
+      blending: THREE.NormalBlending // Rendu normal pour contours plus doux
     });
 
     // Stocker les matériaux outline pour pouvoir les modifier plus tard
     object.userData.outlineMaterials = [];
 
+    const processChild = (child: THREE.Object3D, parent: THREE.Object3D) => {
+      if (child instanceof THREE.Mesh && child.geometry) {
+        const clonedOutlineMaterial = outlineMaterial.clone();
+        const outlineMesh = new THREE.Mesh(child.geometry, clonedOutlineMaterial);
+        
+        // Contour fin et net - juste les bords
+        outlineMesh.scale.multiplyScalar(1.015);
+        outlineMesh.position.copy(child.position);
+        outlineMesh.rotation.copy(child.rotation);
+        outlineMesh.userData.isOutline = true; // Marquer comme contour
+        
+        parent.add(outlineMesh);
+        object.userData.outlineMaterials.push(clonedOutlineMaterial);
+      }
+    };
+
     if (object instanceof THREE.Group) {
       object.children.forEach((child) => {
-        if (child instanceof THREE.Mesh) {
-          const clonedOutlineMaterial = outlineMaterial.clone();
-          const outlineMesh = new THREE.Mesh(child.geometry, clonedOutlineMaterial);
-          outlineMesh.scale.multiplyScalar(1.03); // Légèrement plus grand pour plus de visibilité
-          outlineMesh.position.copy(child.position);
-          outlineMesh.rotation.copy(child.rotation);
-          object.add(outlineMesh);
-          object.userData.outlineMaterials.push(clonedOutlineMaterial);
+        processChild(child, object);
+        // Traiter également les enfants des enfants (pour les groupes imbriqués)
+        if (child instanceof THREE.Group) {
+          child.children.forEach((grandChild) => {
+            processChild(grandChild, child);
+          });
         }
       });
     } else if (object instanceof THREE.Mesh) {
-      const clonedOutlineMaterial = outlineMaterial.clone();
-      const outlineMesh = new THREE.Mesh(object.geometry, clonedOutlineMaterial);
-      outlineMesh.scale.multiplyScalar(1.03); // Légèrement plus grand pour plus de visibilité
-      object.add(outlineMesh);
-      object.userData.outlineMaterials.push(clonedOutlineMaterial);
+      processChild(object, object);
     }
   };
 
@@ -360,38 +370,53 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
         if (moveStateRef.current.left) movePlayer(-speed, 0);
         if (moveStateRef.current.right) movePlayer(speed, 0);
 
-        // Raycasting ultra-optimisé - seulement 1 frame sur 10 pour maximiser les performances
-        if (frameCountRef.current % 10 === 0) {
+        // Raycasting optimisé - 1 frame sur 5 pour meilleure réactivité de la surbrillance
+        if (frameCountRef.current % 5 === 0) {
           raycasterRef.current.setFromCamera(new THREE.Vector2(0, 0), camera);
           
           // Créer une liste réduite d'objets interactifs seulement
           const interactiveObjects: THREE.Object3D[] = [];
           scene.traverse((object) => {
-            if (object.userData.interactive && !object.userData.collected) {
+            if (object.userData.interactive && !object.userData.collected && !object.userData.isOutline) {
               interactiveObjects.push(object);
             }
           });
 
-          const intersects = raycasterRef.current.intersectObjects(interactiveObjects, false);
+          const intersects = raycasterRef.current.intersectObjects(interactiveObjects, true);
 
           // Réinitialiser l'objet précédemment survolé
           if (lastHoveredObject.current) {
             lastHoveredObject.current.userData.outlineMaterials?.forEach((material: THREE.Material) => {
-              (material as THREE.MeshBasicMaterial).opacity = 0;
+              (material as THREE.MeshBasicMaterial).opacity = 0; // Masquer la surbrillance
             });
             lastHoveredObject.current = null;
           }
 
-          // Vérifier seulement le premier intersect
-          if (intersects.length > 0) {
-            const object = intersects[0].object;
+          // Trouver l'objet interactif le plus proche avec vérification de distance
+          for (const intersect of intersects) {
+            let object: THREE.Object3D | null = intersect.object;
+            
+            // Remonter la hiérarchie pour trouver l'objet interactif parent
+            while (object && !object.userData.interactive) {
+              object = object.parent;
+            }
+            
             if (object?.userData.interactive && !object.userData.collected) {
-              lastHoveredObject.current = object;
-              // Surbrillance blanche bien visible pour les objets interactifs
-              object.userData.outlineMaterials?.forEach((material: THREE.Material) => {
-                (material as THREE.MeshBasicMaterial).opacity = 0.8; // Surbrillance très visible
-                (material as THREE.MeshBasicMaterial).color.setHex(0xffffff); // Blanc pur éclatant
-              });
+              // Vérifier la distance - activer seulement si proche (moins de 3 unités)
+              const distance = intersect.distance;
+              const maxInteractionDistance = 3.0;
+              
+              if (distance <= maxInteractionDistance) {
+                lastHoveredObject.current = object;
+                
+                // Contours blancs très fins et discrets pour les objets interactifs
+                object.userData.outlineMaterials?.forEach((material: THREE.Material) => {
+                  const outlineMaterial = material as THREE.MeshBasicMaterial;
+                  outlineMaterial.opacity = 0.1; // 10% d'opacité pour contours très discrets
+                  outlineMaterial.color.setHex(0xffffff); // Blanc pur
+                });
+              }
+              break; // Prendre seulement le premier objet interactif trouvé
             }
           }
         }

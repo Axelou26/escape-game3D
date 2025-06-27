@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import Game from '../models/game.model';
 import User from '../models/user.model';
-import { AppError } from '../utils/error';
+import { AppError } from '../middleware/errorHandler';
 import { ValidationError } from 'sequelize';
 
 interface SequelizeError extends Error {
@@ -188,7 +188,7 @@ export const gameController = {
         isCompleted: true
       });
 
-      console.log(`Partie terminée - Score final: ${finalScore || game.score}, Temps: ${finalTime || game.currentElapsedTime}`);
+      // Game finished debug info removed
 
       res.json({
         status: 'success',

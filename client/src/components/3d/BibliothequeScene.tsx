@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bibliotheque3D } from './Bibliotheque3D';
+import { Bibliotheque3D } from './Bibliotheque3D/Bibliotheque3D';
 import { InventoryItem } from '../../types/gameTypes';
 import { GameState } from '../../types/gameState';
 import { BookContent } from '../ui/BookContent/BookContent';

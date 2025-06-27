@@ -8,9 +8,9 @@ import { BookContent } from './ui/BookContent/BookContent';
 import { RiddleContent } from './ui/RiddleContent/RiddleContent';
 import { CodeInput } from './ui/CodeInput/CodeInput';
 import { GameHUD } from './ui/GameHUD/GameHUD';
-import { FPSCounter } from './ui/FPSCounter';
+import { FPSCounter } from './ui/FPSCounter/FPSCounter';
 import { PauseMenu } from './ui/PauseMenu/PauseMenu';
-import { GameOverMessage } from './ui/GameOverMessage';
+import { GameOverMessage } from './ui/GameOverMessage/GameOverMessage';
 import { InventoryItem, GameState } from '../types/gameTypes';
 import './game/EscapeGame.css';
 import { scoreService, ScoreEventType } from '../services/scoreService';
@@ -728,10 +728,11 @@ export const EscapeGame: React.FC = () => {
       } catch (error: any) {
         console.error('Erreur sync serveur:', error);
         if (error.message?.includes('429') || error.message?.includes('Rate limit') || error.message?.includes('Trop de requêtes')) {
-          // Différer la prochaine sync en cas de rate limit
-          lastServerSync = now + 30000; // Reporter de 30 secondes seulement
+          // Différer la prochaine sync en cas de rate limit - augmenté significativement
+          lastServerSync = now + 120000; // Reporter de 2 minutes pour éviter le spam
+          console.warn('Rate limit atteint, prochaine sync dans 2 minutes');
         } else if (error.message?.includes('fetch') || error.message?.includes('NetworkError')) {
-          lastServerSync = now + 10000; // Reporter de 10 secondes pour erreur réseau
+          lastServerSync = now + 60000; // Reporter de 1 minute pour erreur réseau
         }
       } finally {
         isServerSyncInProgress = false;
@@ -744,8 +745,8 @@ export const EscapeGame: React.FC = () => {
     // Première synchronisation avec le serveur après 3 secondes
     serverSyncTimeout = setTimeout(syncWithServer, 3000);
 
-    // Synchronisations périodiques toutes les 30 secondes
-    serverSyncInterval = setInterval(syncWithServer, 30000);
+    // Synchronisations périodiques toutes les 45 secondes (réduit la fréquence)
+    serverSyncInterval = setInterval(syncWithServer, 45000);
 
     return () => {
       isMounted = false;
@@ -962,6 +963,7 @@ export const EscapeGame: React.FC = () => {
         setShowCodeInput(false);
         setCurrentCodeType('drawer');
         setMessage('Partie réinitialisée avec succès');
+        setTimeout(() => setMessage(''), 1500); // Message disparaît après 1,5 seconde
         setCodeErrorMessage('');
         setShowBook(false);
         setShowRiddleContent(false);

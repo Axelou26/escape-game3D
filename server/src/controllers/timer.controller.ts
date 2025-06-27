@@ -52,7 +52,7 @@ export const timerController = {
       // Vérifier si le temps client est cohérent (tolérance de 10 secondes)
       const timeDifference = Math.abs(serverElapsedTime - clientElapsedTime);
       if (timeDifference > 10) {
-        console.warn(`Désynchronisation temporelle détectée pour l'utilisateur ${req.user.id}: client=${clientElapsedTime}s, serveur=${serverElapsedTime}s`);
+        // Time desync warning removed
       }
 
       // Utiliser le temps serveur comme référence
@@ -78,7 +78,7 @@ export const timerController = {
       const penaltyIntervals = Math.floor(validElapsedTime / GAME_CONFIG.TIMER.TIME_PENALTY_INTERVAL);
       const lastPenaltyIntervals = Math.floor(game.currentElapsedTime / GAME_CONFIG.TIMER.TIME_PENALTY_INTERVAL);
       
-      console.log(`🕐 Timer sync - User: ${req.user.id}, Temps: ${validElapsedTime}s, Intervalles pénalité: ${penaltyIntervals}, Derniers intervalles: ${lastPenaltyIntervals}`);
+              // Timer sync debug info removed
       
       let newScore = game.score;
       let penaltiesApplied = 0;
@@ -90,7 +90,7 @@ export const timerController = {
         newScore = Math.max(GAME_CONFIG.LIMITS.MIN_SCORE, game.score + totalPenalty);
         penaltiesApplied = newPenalties;
         
-        console.log(`⏰ PÉNALITÉ APPLIQUÉE - Nouvelles pénalités: ${newPenalties}, Total pénalité: ${totalPenalty}, Ancien score: ${game.score}, Nouveau score: ${newScore}`);
+                  // Penalty applied debug info removed
 
         // Enregistrer les événements de pénalité
         for (let i = 0; i < newPenalties; i++) {

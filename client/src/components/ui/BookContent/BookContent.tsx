@@ -12,16 +12,11 @@ export const BookContent: React.FC<BookContentProps> = ({ onClose }) => {
   useEffect(() => {
     const loadJournalContent = async () => {
       try {
-        const journalData = await gameApi.getRiddleContent('mysterious-book');
+        const journalData = await gameApi.getRiddleContent('professors-journal');
         setContent(typeof journalData.content === 'string' ? journalData.content : journalData.content.riddle);
       } catch (error) {
         console.error('Erreur lors du chargement du journal:', error);
-        try {
-          const fallbackData = await gameApi.getRiddleContent('professors-journal');
-          setContent(typeof fallbackData.content === 'string' ? fallbackData.content : fallbackData.content.riddle);
-        } catch (fallbackError) {
-          setContent('Impossible de charger le contenu du journal.');
-        }
+        setContent('Impossible de charger le contenu du journal.');
       } finally {
         setIsLoading(false);
       }

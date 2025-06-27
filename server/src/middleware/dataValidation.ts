@@ -7,10 +7,7 @@ export const handleValidationErrors = (req: Request, res: Response, next: NextFu
   
   if (!errors.isEmpty()) {
     // Logger les tentatives de données invalides
-    console.warn(`🚨 VALIDATION FAILED - IP: ${req.ip}, User: ${(req as any).user?.id || 'anonymous'}`);
-    console.warn(`Endpoint: ${req.method} ${req.path}`);
-    console.warn(`Errors: ${JSON.stringify(errors.array())}`);
-    console.warn(`Body: ${JSON.stringify(req.body)}`);
+    // Validation failed debug info removed
     
     return res.status(400).json({
       status: 'error',
@@ -206,9 +203,7 @@ export const detectDataAnomalies = (req: Request, res: Response, next: NextFunct
   const allData = { ...req.body, ...req.query, ...req.params };
   
   if (checkData(allData)) {
-    console.error(`🚨 TENTATIVE D'INJECTION DÉTECTÉE - IP: ${req.ip}, User: ${(req as any).user?.id || 'anonymous'}`);
-    console.error(`Endpoint: ${req.method} ${req.path}`);
-    console.error(`Suspicious data: ${JSON.stringify(allData)}`);
+    // Injection attempt detected - debug info removed
     
     return res.status(400).json({
       status: 'error',
@@ -231,7 +226,7 @@ export const validateScoreIntegrity = (req: Request, res: Response, next: NextFu
     const minPossibleScore = Math.max(0, 1000 - (elapsedTime / 120) * 10); // Avec pénalités
     
     if (score > maxPossibleScore || score < -1000) {
-      console.error(`🚨 SCORE SUSPECT DÉTECTÉ - User: ${(req as any).user?.id}, Score: ${score}, Time: ${elapsedTime}`);
+      // Suspicious score detected - debug info removed
       
       return res.status(400).json({
         status: 'error',

@@ -170,6 +170,11 @@ class GameStateApiService {
       });
 
       if (!response.ok) {
+        if (response.status === 429) {
+          // Gestion spécifique du rate limiting
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`Rate limit atteint: ${errorData.message || 'Trop de requêtes'}`);
+        }
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
 

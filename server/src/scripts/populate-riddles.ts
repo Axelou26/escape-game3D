@@ -40,17 +40,17 @@ Et le deuxième est plus petit que le quatrième.`,
         isActive: true
       },
       {
-        id: 'riddle-wisdom',
+        id: 'professors-journal',
         roomId: 'library',
-        name: 'Énigme de Sagesse',
-        description: 'Une énigme cachée dans un livre ancien',
+        name: 'Journal du Professeur',
+        description: 'Le journal personnel du professeur disparu',
         content: {
-          riddle: "Je transmets les pensées d'un homme à un autre,\nJe traverse le monde et pourtant je ne bouge pas.\nObserve ma dernière lettre, trouve sa position dans l'alphabet,\net tu auras le chiffre du code.\nQui suis-je ?",
-          answer: 'LIVRE',
-          hint: 'Je contiens des mots, des histoires, et je reste immobile sur une étagère.'
+          riddle: "20 Juillet 1969\n\nJe suis l'année du changement,\nL'année où l'homme quitta son monde rond.\nÀ bord d'un aigle, il se posa,\nSur un sol que nul ne foulait, voilà.\n\nCe fut un petit pas pour l'homme mais un grand pas pour l'humanité.\n\nLa réponse est dans ce tiroir que plus personne n'ouvre.",
+          answer: '1969',
+          hint: 'L\'année où l\'homme a fait un petit pas mais l\'humanité un grand pas.'
         },
         points: 100,
-        position: { x: 1, y: 3, z: -7 },
+        position: { x: 0, y: 1, z: 0 },
         isActive: true
       }
     ];
@@ -81,9 +81,9 @@ Et le deuxième est plus petit que le quatrième.`,
         name: 'XXXC',
         description: 'Une énigme cachée dans un livre ancien',
         content: {
-          riddle: "Mon domaine n'est ni maison ni château,\nPourtant, chaque jour, on y entre sans fardeau.\n\nOn y cherche des clés, mais pas de métal,\nPlutôt celles qui ouvrent un savoir vital.\n\nSilencieux parfois, agité souvent,\nJ'abrite l'esprit des petits et des grands.\nQui suis je?\n\ncompte mes voyelles et tu trouve le chiffre pour le code",
+          riddle: "Mon domaine n'est ni maison ni château,\nPourtant, chaque jour, on y entre sans fardeau.\n\nOn y cherche des clés, mais pas de métal,\nPlutôt celles qui ouvrent un savoir vital.\n\nSilencieux parfois, agité souvent,\nJ'abrite l'esprit des petits et des grands.\nQui suis-je ?\n\nCompte mes voyelles et tu trouveras le chiffre pour le code",
           answer: '3',
-          hint: 'nous y sommes actuellement'
+          hint: 'Nous y sommes actuellement'
         },
         points: 75,
         position: { x: -3, y: 1.5, z: -2 },
@@ -97,7 +97,7 @@ Et le deuxième est plus petit que le quatrième.`,
         content: {
           riddle: "Je transmets les pensées d'un homme à un autre,\nJe traverse le monde et pourtant je ne bouge pas.\nQui suis-je ?\nObserve ma dernière lettre, trouve sa position dans l'alphabet,\net tu auras le chiffre du code.",
           answer: '5',
-          hint: 'l ancêtre du SMS'
+          hint: 'L\'ancêtre du SMS'
         },
         points: 75,
         position: { x: 2, y: 1.8, z: -5 },
@@ -123,9 +123,9 @@ Et le deuxième est plus petit que le quatrième.`,
         name: 'CXXX',
         description: 'Une énigme mystérieuse gravée sur un symbole solaire',
         content: {
-          riddle: "Un marchand dans un village médiéval, portant un panier de six pommes dorées cueillies à l'aube.\nEn chemin vers le marché, ton ami forgeron te demande un partage. Tu lui donnes la moitié des pommes.\nUne herboriste t'offre ensuite quatre pommes pour une herbe rare, que tu ajoutes au panier.\nMais un corbeau voleur\ndérobe une pomme avant que tu n'atteignes l'étal.\nCombien de pommes reste-t-il dans ton panier ?",
+          riddle: "Un marchand dans un village médiéval, portant un panier de six pommes dorées cueillies à l'aube.\nEn chemin vers le marché, ton ami forgeron te demande un partage. Tu lui donnes la moitié des pommes.\nUne herboriste t'offre ensuite quatre pommes pour une herbe rare, que tu ajoutes au panier.\nMais un corbeau voleur dérobe une pomme avant que tu n'atteignes l'étal.\nCombien de pommes reste-t-il dans ton panier ?",
           answer: '6',
-          hint: 'fais le calcul'
+          hint: 'Fais le calcul'
         },
         points: 75,
         position: { x: 5, y: 2.5, z: -8 },
@@ -142,7 +142,7 @@ Et le deuxième est plus petit que le quatrième.`,
         objectId: 'locked-drawer',
         name: 'Code du Tiroir',
         type: 'code' as const,
-        solution: '1963',
+        solution: '1969',
         hints: {
           hints: ['Le marque-page pourrait contenir un indice...', 'Cherche une date importante dans l\'histoire.']
         },

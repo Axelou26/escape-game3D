@@ -60,6 +60,14 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
   const navigate = useNavigate();
 
   const lastFrameTimeRef = useRef<number>(0);
+  
+  // Refs pour le raycasting optimisé avec surbrillance
+  const raycasterRef = useRef(new THREE.Raycaster());
+  const lastHoveredObjectRef = useRef<THREE.Object3D | null>(null);
+  
+  // Cache des objets interactifs pour optimiser le raycasting
+  const interactiveObjectsCacheRef = useRef<THREE.Object3D[]>([]);
+  const cacheInvalidatedRef = useRef<boolean>(true);
 
   // Ajouter les références pour les matériaux et géométries partagés
   const sharedMaterials = useMemo(() => ({
@@ -81,10 +89,58 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     wallGeometry: new THREE.CylinderGeometry(10, 10, 4, 32, 1, true)
   }), []);
 
+  // Fonction optimisée pour créer des objets interactifs avec surbrillance blanche
   const makeInteractive = useCallback((object: THREE.Object3D, id: string, type: string) => {
     object.userData.interactive = true;
     object.userData.id = id;
     object.userData.type = type;
+    
+    // Invalider le cache des objets interactifs
+    cacheInvalidatedRef.current = true;
+
+    const outlineMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff, // Blanc pour la surbrillance
+      side: THREE.BackSide,
+      transparent: true,
+      opacity: 0, // Démarrer invisible, sera ajusté au survol
+      depthTest: false, // Améliore la visibilité de la surbrillance
+      depthWrite: false,
+      blending: THREE.NormalBlending // Rendu normal pour contours plus doux
+    });
+
+    // Stocker les matériaux outline pour pouvoir les modifier plus tard
+    object.userData.outlineMaterials = [];
+    console.log(`Creating outline for interactive object: ${id} (${type})`);
+
+    const processChild = (child: THREE.Object3D, parent: THREE.Object3D) => {
+      if (child instanceof THREE.Mesh && child.geometry) {
+        const clonedOutlineMaterial = outlineMaterial.clone();
+        const outlineMesh = new THREE.Mesh(child.geometry, clonedOutlineMaterial);
+        
+        // Contour fin et net - juste les bords
+        outlineMesh.scale.multiplyScalar(1.015);
+        outlineMesh.position.copy(child.position);
+        outlineMesh.rotation.copy(child.rotation);
+        outlineMesh.userData.isOutline = true; // Marquer comme contour
+        
+        parent.add(outlineMesh);
+        object.userData.outlineMaterials.push(clonedOutlineMaterial);
+      }
+    };
+
+    if (object instanceof THREE.Group) {
+      object.children.forEach((child) => {
+        processChild(child, object);
+        // Traiter également les enfants des enfants (pour les groupes imbriqués)
+        if (child instanceof THREE.Group) {
+          child.children.forEach((grandChild) => {
+            processChild(grandChild, child);
+          });
+        }
+      });
+    } else if (object instanceof THREE.Mesh) {
+      processChild(object, object);
+    }
   }, []);
 
   const createSunSymbol = useCallback(() => {
@@ -273,11 +329,9 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       newPosition.add(direction.multiplyScalar(z));
     }
 
-    // Limiter la position du joueur aux murs de la salle
-    const radius = 9.5;
-    const positionCheck = newPosition.clone();
-    positionCheck.y = 0;
-    if (positionCheck.length() > radius) {
+    // Collision simplifiée et optimisée - vérification seulement de la distance du centre
+    const distanceFromCenter = Math.sqrt(newPosition.x * newPosition.x + newPosition.z * newPosition.z);
+    if (distanceFromCenter > 9.2) { // Légèrement plus proche du mur pour éviter les clips
       return;
     }
 
@@ -289,41 +343,50 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
   const updateInteractiveHighlight = useCallback(() => {
     if (!cameraRef.current || !sceneRef.current) return;
 
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(new THREE.Vector2(0, 0), cameraRef.current);
-    const intersects = raycaster.intersectObjects(sceneRef.current.children, true);
+    raycasterRef.current.setFromCamera(new THREE.Vector2(0, 0), cameraRef.current);
+    
+    // Utiliser le cache des objets interactifs ou le reconstruire si nécessaire
+    if (cacheInvalidatedRef.current) {
+      interactiveObjectsCacheRef.current = [];
+      sceneRef.current.traverse((object) => {
+        if (object.userData.interactive && !object.userData.isOutline) {
+          interactiveObjectsCacheRef.current.push(object);
+        }
+      });
+      cacheInvalidatedRef.current = false;
+    }
 
-    // Réinitialiser tous les objets interactifs
-    sceneRef.current.traverse((object) => {
-      if (object.userData.interactive) {
-        object.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            if (child.material instanceof THREE.MeshStandardMaterial) {
-              child.material.emissiveIntensity = 0.2;
-              child.material.emissive.setHex(0x000000);
-            }
-          }
-        });
-      }
-    });
+    const intersects = raycasterRef.current.intersectObjects(interactiveObjectsCacheRef.current, true);
 
-    // Mettre en surbrillance l'objet visé
-    for (const intersect of intersects) {
+    // Réinitialiser l'objet précédemment survolé
+    if (lastHoveredObjectRef.current?.userData.outlineMaterials) {
+      lastHoveredObjectRef.current.userData.outlineMaterials.forEach((material: THREE.Material) => {
+        (material as THREE.MeshBasicMaterial).opacity = 0;
+      });
+      lastHoveredObjectRef.current = null;
+    }
+
+    // Optimisation : prendre le premier objet valide directement
+    if (intersects.length > 0) {
+      const intersect = intersects[0];
       let object: THREE.Object3D | null = intersect.object;
+      
+      // Remonter la hiérarchie pour trouver l'objet interactif parent
       while (object && !object.userData.interactive) {
         object = object.parent;
       }
-
-      if (object?.userData.interactive) {
-        object.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            if (child.material instanceof THREE.MeshStandardMaterial) {
-              child.material.emissiveIntensity = 0.5;
-              child.material.emissive.setHex(0xffffff);
-            }
-          }
-        });
-        break;
+      
+      if (object?.userData.interactive && intersect.distance <= 3.5) { // Distance d'interaction légèrement augmentée
+        lastHoveredObjectRef.current = object;
+        
+        // Contours blancs optimisés
+        if (object.userData.outlineMaterials) {
+          object.userData.outlineMaterials.forEach((material: THREE.Material) => {
+            const outlineMaterial = material as THREE.MeshBasicMaterial;
+            outlineMaterial.opacity = 0.4; // Légèrement plus visible
+            outlineMaterial.color.setHex(0xffffff);
+          });
+        }
       }
     }
   }, []);
@@ -418,31 +481,6 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
 
     // Garder une référence au mountRef.current pour le nettoyage
     const mountElement = mountRef.current;
-
-    // Sol circulaire
-    const floorGeometry = new THREE.CircleGeometry(10, 32);
-    const floorMaterial = new THREE.MeshStandardMaterial({
-      color: 0x1a1a1a,
-      roughness: 0.8,
-      metalness: 0.2
-    });
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    scene.add(floor);
-
-    // Mur circulaire
-    const wallGeometry = new THREE.CylinderGeometry(10, 10, 4, 32, 1, true);
-    const wallMaterial = new THREE.MeshStandardMaterial({
-      color: 0x2a2a2a,
-      roughness: 0.7,
-      metalness: 0.3,
-      side: THREE.BackSide
-    });
-    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
-    wall.position.y = 2;
-    wall.receiveShadow = true;
-    scene.add(wall);
 
     // Hiéroglyphes sur les murs
     const createHieroglyphs = () => {
@@ -1055,21 +1093,21 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       const deltaTime = now - (lastFrameTimeRef.current || now);
       lastFrameTimeRef.current = now;
 
-      // Limiter le frame rate à environ 60 FPS
-      if (deltaTime < 16.67) { // 1000ms / 60fps ≈ 16.67ms
+      // Optimisation: permettre un frame rate plus élevé pour un mouvement plus fluide
+      if (deltaTime < 12) { // Environ 83 FPS max au lieu de 60 FPS
         animationFrameRef.current = requestAnimationFrame(animate);
         return;
       }
       
       if (controlsRef.current?.isLocked) {
-        const speed = 0.15 * (deltaTime / 16.67); // Normaliser la vitesse par rapport au frame rate
+        const speed = 0.25 * (deltaTime / 16.67); // Augmentation de la vitesse de 0.15 à 0.25
         if (moveStateRef.current.forward) movePlayer(0, -speed);
         if (moveStateRef.current.backward) movePlayer(0, speed);
         if (moveStateRef.current.left) movePlayer(-speed, 0);
         if (moveStateRef.current.right) movePlayer(speed, 0);
 
-        // Ne mettre à jour la surbrillance que si le joueur bouge
-        if (Object.values(moveStateRef.current).some(value => value)) {
+        // Raycasting optimisé - 1 frame sur 8 pour améliorer les performances
+        if (Math.floor(now / 16.67) % 8 === 0) {
           updateInteractiveHighlight();
         }
       }
@@ -1082,7 +1120,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     };
 
     animate();
-  }, [sharedGeometries, sharedMaterials, initRenderer]);
+  }, [sharedGeometries, sharedMaterials, initRenderer, makeInteractive, handleObjectInteraction, movePlayer, updateInteractiveHighlight]);
 
   // Effet pour gérer le montage initial
   useEffect(() => {
