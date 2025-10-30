@@ -18,10 +18,7 @@ import { gameApi } from '../services/gameApi';
 import { gameStateApi } from '../services/gameStateApi';
 
 import { inventoryService } from '../services/inventoryService';
-
-
-// Configuration de l'API
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+import { API_URL } from '../config';
 
 export const EscapeGame: React.FC = () => {
   const navigate = useNavigate();
