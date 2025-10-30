@@ -13,7 +13,7 @@ class AuthService {
 
   private readonly TOKEN_EXPIRY_BUFFER = 5 * 60 * 1000; // 5 minutes avant expiration
 
-  // Initialiser depuis localStorage (temporaire - en attendant httpOnly cookies)
+  // Initialiser depuis localStorage 
   init(): void {
     try {
       const token = localStorage.getItem('token');

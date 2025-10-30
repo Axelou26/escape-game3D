@@ -16,7 +16,7 @@ export type ScoreEventType =
 class ScoreService {
   private currentScore: number = 0;
 
-  // Mettre à jour le score avec un événement - TOUJOURS côté serveur
+  // Mettre à jour le score avec un événement  côté serveur
   async updateScore(eventType: ScoreEventType, details?: string): Promise<{ newScore: number; points: number }> {
     try {
       const result = await gameApi.addScoreEvent(eventType, details);
@@ -28,7 +28,7 @@ class ScoreService {
     }
   }
 
-  // Obtenir le score actuel depuis le serveur UNIQUEMENT
+  // Obtenir le score actuel depuis le serveur
   async getCurrentScore(): Promise<{ score: number; elapsedTime: number }> {
     try {
       const result = await gameApi.getCurrentScore();
@@ -40,7 +40,7 @@ class ScoreService {
     }
   }
 
-  // Ajouter une pénalité de temps - TOUJOURS côté serveur
+  // Ajouter une pénalité de temps côté serveur
   async addTimePenalty(elapsedTime: number): Promise<{ penalty: number; newScore: number }> {
     try {
       const result = await gameApi.addTimePenalty(elapsedTime);
