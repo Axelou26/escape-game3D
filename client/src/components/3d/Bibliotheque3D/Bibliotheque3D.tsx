@@ -170,7 +170,9 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
   }, []);
 
   useEffect(() => {
-    if (!mountRef.current || !isMountedRef.current || isDisposedRef.current) return;
+    // Copier mountRef.current au début pour éviter les problèmes dans le cleanup
+    const mountElement = mountRef.current;
+    if (!mountElement || !isMountedRef.current || isDisposedRef.current) return;
 
     // Si déjà initialisé, on ne recrée pas la scène
     if (isInitializedRef.current) {
@@ -1510,7 +1512,7 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
       // Marquer comme en cours de démontage
       isDisposedRef.current = true;
       
-      const mountElement = mountRef.current;
+      // Utiliser mountElement copié au début de l'effet
       
       // Nettoyer les event listeners
       window.removeEventListener('keydown', handleKeyDown);

@@ -90,6 +90,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
   const isMountedRef = useRef(false);
   const [selectedBeakers, setSelectedBeakers] = useState<string[]>([]);
   const selectedBeakersRef = useRef<string[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isPeriodicTableLocked, setIsPeriodicTableLocked] = useState(!periodicTableUnlocked);
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [codeErrorMessage, setCodeErrorMessage] = useState<string>('');
