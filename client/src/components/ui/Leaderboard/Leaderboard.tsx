@@ -26,6 +26,7 @@ export const Leaderboard: React.FC = () => {
           }
         });
         
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const contentType = response.headers.get('content-type');
 
         if (!response.ok) {

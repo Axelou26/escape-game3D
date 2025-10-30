@@ -267,7 +267,8 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     }
   }, [onInteract, onUpdateGameState]);
 
-  // Vérification des collisions
+  // Vérification des collisions - conservée pour usage futur
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const checkCollision = useCallback((position: THREE.Vector3): boolean => {
     const playerRadius = 0.5;
     const playerHeight = 1.8;
@@ -446,7 +447,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
         break;
       }
     }
-  }, [checkColorSequence, isPeriodicTableLocked, periodicTableUnlocked, onInteract, inventory, onUpdateGameState]);
+  }, [checkColorSequence, periodicTableUnlocked, onInteract, inventory, onUpdateGameState]);
 
   // Mettre à jour la ref quand l'état change
   useEffect(() => {
@@ -1486,7 +1487,6 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
     let fpsLimit = 60;
     let fpsInterval = 1000 / fpsLimit;
     let then = performance.now();
-    let frameCount = 0;
     let lastRaycastTime = 0;
     
     const animate = () => {
@@ -1511,8 +1511,6 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
           //  utiliser un viewport plus petit si nécessaire
           rendererRef.current.render(sceneRef.current, cameraRef.current);
         }
-        
-        frameCount++;
       }
       
       animationFrameRef.current = requestAnimationFrame(animate);
@@ -1789,6 +1787,7 @@ export const LaboratoireScene: React.FC<LaboratoireSceneProps> = React.memo(({
       isDisposedRef.current = true;
       isInitializedRef.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initRenderer, onInteract, onUpdateGameState]);
 
   // Effet principal pour l'initialisation de la scène

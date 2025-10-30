@@ -57,11 +57,6 @@ export const BibliothequeScene: React.FC<BibliothequeSceneProps> = ({
     }
   };
 
-  const handleItemClick = (item: InventoryItem) => {
-    if (item.id === 'mysterious-book') {
-      setShowBook(true);
-    }
-  };
 
   return (
     <>

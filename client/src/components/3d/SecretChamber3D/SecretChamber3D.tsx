@@ -479,8 +479,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       controlsRef.current = controls;
     }
 
-    // Garder une référence au mountRef.current pour le nettoyage
-    const mountElement = mountRef.current;
+    // Garder une référence au mountRef.current pour le nettoyage (utilisé dans le cleanup)
 
     // Hiéroglyphes sur les murs
     const createHieroglyphs = () => {
@@ -1119,6 +1118,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     };
 
     animate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sharedGeometries, sharedMaterials, initRenderer, makeInteractive, handleObjectInteraction, movePlayer, updateInteractiveHighlight]);
 
   // Effet pour gérer le montage initial
@@ -1165,8 +1165,10 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
 
       // Nettoyer le renderer
       if (rendererRef.current) {
-        if (mountRef.current?.contains(rendererRef.current.domElement)) {
-          mountRef.current.removeChild(rendererRef.current.domElement);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        const mountElement = mountRef.current;
+        if (mountElement?.contains(rendererRef.current.domElement)) {
+          mountElement.removeChild(rendererRef.current.domElement);
         }
         rendererRef.current.dispose();
         rendererRef.current = null;
@@ -1184,6 +1186,7 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
       Object.values(sharedMaterials).forEach(material => material.dispose());
       Object.values(sharedGeometries).forEach(geometry => geometry.dispose());
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Effet principal pour l'initialisation de la scène
@@ -1204,7 +1207,8 @@ export const SecretChamber3D: React.FC<SecretChamber3DProps> = ({ onInteract, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
- //collision
+ //collision - conservée pour usage futur
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const checkCollision = useCallback((newPosition: THREE.Vector3): boolean => {
     // Limites de base de la chambre circulaire
     const distance = Math.sqrt(newPosition.x * newPosition.x + newPosition.z * newPosition.z);

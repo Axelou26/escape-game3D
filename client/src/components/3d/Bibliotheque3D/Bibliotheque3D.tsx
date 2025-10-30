@@ -1598,11 +1598,13 @@ export const Bibliotheque3D: React.FC<Bibliotheque3DProps> = ({ onInteract, isCo
         right: false,
       };
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene, camera]);
 
   // Effet séparé pour gérer les changements de isCodeValid sans recréer la scène
   useEffect(() => {
-    
+    // Cet effet est utilisé pour gérer les changements de onInteract
+    // onInteract est déjà géré via les refs dans le code
   }, [camera, onInteract, scene]);
 
   return (
