@@ -20,10 +20,11 @@
     "typescript": "^4.9.0"
   },
   "scripts": {
-    "start": "cd client && react-scripts start",
-    "build": "cd client && react-scripts build",
+    "start": "cd client && node server.js",
+    "build": "cd client && npm run build",
     "test": "cd client && react-scripts test",
-    "eject": "cd client && react-scripts eject"
+    "eject": "cd client && react-scripts eject",
+    "dev": "cd client && react-scripts start"
   },
   "eslintConfig": {
     "extends": [
