@@ -12,9 +12,9 @@ app.use((req, res, next) => {
     "default-src 'self'; " +
     "script-src 'self' 'unsafe-eval' 'unsafe-inline'; " +
     "style-src 'self' 'unsafe-inline'; " +
-    "img-src 'self' data: blob: https:; " +
+    "img-src 'self' data: blob: https: http:; " +
     "font-src 'self' data:; " +
-    "connect-src 'self' https: ws: wss:; " +
+    "connect-src 'self' https: http: ws: wss:; " +
     "worker-src 'self' blob:; " +
     "frame-src 'none'; " +
     "object-src 'none'; " +

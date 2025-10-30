@@ -6,6 +6,7 @@ import RestoreIcon from '@mui/icons-material/Restore';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { styled } from '@mui/material/styles';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
+import { API_URL } from '../config';
 
 const IntroContainer = styled(Container)(({ theme }) => ({
   minHeight: '100vh',
@@ -111,7 +112,7 @@ export const GameIntro: React.FC = () => {
       }
 
       try {
-        const response = await fetch('http://localhost:3001/api/game/current', {
+        const response = await fetch(`${API_URL}/game/current`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -150,7 +151,7 @@ export const GameIntro: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/game/reset', {
+      const response = await fetch(`${API_URL}/game/reset`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
